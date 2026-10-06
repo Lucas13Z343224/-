@@ -11,6 +11,8 @@ workers_dev = true
 # « en ligne ✅ » à la racine et les interactions Discord) est traité par le Worker.
 [assets]
 directory = "./public"
+# Permet au bot de lire ses propres images (env.ASSETS) pour les envoyer comme pièces jointes à Discord.
+binding = "ASSETS"
 
 # Stockage des tickets ouverts (Cloudflare KV, gratuit).
 [[kv_namespaces]]

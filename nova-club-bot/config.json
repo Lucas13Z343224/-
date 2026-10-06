@@ -2,10 +2,10 @@
   "_aide": "Tous les textes du bot sont ici. Modifie seulement ce qui est entre guillemets à droite des deux-points, puis redéploie (npx wrangler deploy). Les valeurs marquées « À REMPLACER » sont des exemples. Dans les textes : **gras**, *italique*, - listes, \\n = retour à la ligne. Variables possibles : {user}, {category}, {channel}, {staff}, {role}, {prix}, {lien}, {salon_questions}, {categories}.",
   "server_name": "NOVA CLUB | E-commerce",
   "color": "#FF6B1A",
-  "banner_position": "haut_encadre",
-  "_banner_position_aide": "Où s'affiche la bannière : \"haut_encadre\" (recommandé) = un premier encadré ne contenant que la bannière « -haut », puis l'encadré habituel, dans le même message ; \"haut\" = adresse de la bannière « -haut » dans le texte du message (Discord doit en faire un aperçu, ce qui ne marche pas toujours) ; \"encadre\" = ancienne bannière dans l'encadré, en bas. Pour changer : modifie la valeur, redéploie (npx wrangler deploy) et republie les panneaux.",
+  "banner_position": "fichier",
+  "_banner_position_aide": "Où s'affiche la bannière : \"fichier\" (recommandé) = le bot envoie le GIF « -haut » comme pièce jointe du message, posée au-dessus de l'encadré, sans boîte autour ; \"haut_encadre\" = un premier encadré ne contenant que la bannière, puis l'encadré habituel ; \"haut\" = adresse de la bannière dans le texte du message (l'aperçu du lien n'est pas toujours créé par Discord) ; \"encadre\" = ancienne bannière dans l'encadré, en bas. Pour changer : modifie la valeur, redéploie (npx wrangler deploy) et republie les panneaux.",
   "banner_embed_color": "#2B2D31",
-  "_banner_embed_color_aide": "Couleur du premier encadré (bannière seule) en mode \"haut_encadre\". #2B2D31 = couleur du fond de Discord (thème sombre) : la barre latérale devient invisible.",
+  "_banner_embed_color_aide": "Couleur du premier encadré (bannière seule) en mode \"haut_encadre\" uniquement. #2B2D31 = couleur du fond de Discord (thème sombre) : la barre latérale devient invisible.",
   "timezone": "Europe/Paris",
   "footer": "NOVA CLUB | E-commerce",
   "commands": {
@@ -224,7 +224,11 @@
     "not_image": "⚠️ {file} : Discord ne reçoit pas une image ({type}). Vérifie que le fichier est bien dans public/ et redéploie.",
     "pending": "⏳ {file} : Discord n'a pas encore analysé l'image. Vérifie l'affichage dans le salon ; si elle n'apparaît pas, lance npm run check-images.",
     "gif_unconfirmed": "🖼️ {file} : GIF reconnu par Discord, mais pas signalé comme animé. Vérifie à l'écran ; sinon remplace le fichier par un vrai GIF animé (npm run check-images).",
-    "unfurl_pending": "⏳ {file} : Discord n'a pas encore affiché la bannière du haut. Regarde le salon ; si elle manque, ouvre son adresse dans le navigateur (npm run check-images) et vérifie que « Afficher l'aperçu des liens » est activé dans tes réglages Discord (Paramètres > Texte et images)."
+    "unfurl_pending": "⏳ {file} : Discord n'a pas encore affiché la bannière du haut. Regarde le salon ; si elle manque, ouvre son adresse dans le navigateur (npm run check-images) et vérifie que « Afficher l'aperçu des liens » est activé dans tes réglages Discord (Paramètres > Texte et images).",
+    "attachment_animated": "🎞️ {file} : pièce jointe reconnue par Discord ({type}, animée, {size}).",
+    "attachment_static": "⚠️ {file} : pièce jointe reconnue par Discord ({type}, {size}) mais NON signalée comme animée. Vérifie que le fichier de public/ est un vrai GIF animé (npm run check-images).",
+    "attachment_wrong_type": "⚠️ {file} : Discord a reconnu la pièce jointe comme « {type} » au lieu de image/gif. Vérifie le fichier de public/.",
+    "attachment_missing": "⚠️ {file} : la pièce jointe n'apparaît pas dans le message relu. Regarde le salon ; si la bannière manque, passe banner_position à \"haut_encadre\"."
   },
   "images_version": "2",
   "_images_version_aide": "Ajouté à la fin des adresses d'images (?v=2) pour que Discord recharge une image remplacée. Quand tu remplaces une image par une nouvelle version, augmente ce nombre (3, 4…) et redéploie, puis republie les panneaux.",
@@ -296,6 +300,11 @@
     "annonce_role_missing": "⚠️ Tu as choisi de mentionner un rôle : renseigne l'option « role » de la commande.",
     "annonce_empty": "⚠️ Le titre et le texte de l'annonce ne peuvent pas être vides.",
     "embed_too_long": "⚙️ Le texte du panneau est trop long pour Discord (limite : {max} caractères, actuellement {size}). Raccourcis-le dans config.json.",
-    "invalid_banner_position": "⚙️ Dans config.json, « banner_position » doit valoir \"haut_encadre\", \"haut\" ou \"encadre\" (valeur actuelle : {value})."
+    "invalid_banner_position": "⚙️ Dans config.json, « banner_position » doit valoir \"fichier\", \"haut_encadre\", \"haut\" ou \"encadre\" (valeur actuelle : {value}).",
+    "missing_attach_files": "⛔ Le bot n'a pas la permission « Joindre des fichiers » dans {channel}. Ajoute-la au rôle du bot (ou dans les permissions de ce salon : Modifier le salon > Permissions > rôle du bot > Joindre des fichiers), puis relance la commande. Il lui faut aussi « Voir le salon », « Envoyer des messages » et « Intégrer des liens ».",
+    "missing_assets_binding": "⚙️ Le bot ne trouve pas ses images (binding ASSETS absent). Copie le fichier wrangler.toml de la dernière version (section [assets] avec binding = \"ASSETS\") puis relance npx wrangler deploy.",
+    "banner_file_missing": "⚙️ Image introuvable dans public/ : {file}. Copie le fichier dans nova-club-bot/public/ puis relance npx wrangler deploy (npm run check-images -- --local vérifie les fichiers).",
+    "banner_file_too_big": "⚠️ L'image {file} pèse {size}, plus que la limite d'envoi de Discord sur ce serveur ({limit}). Utilise un GIF plus léger.",
+    "publish_with_file_failed": "⛔ Discord a refusé l'envoi du message avec la bannière jointe. Vérifie que le bot a « Voir le salon », « Envoyer des messages », « Intégrer des liens » et « Joindre des fichiers » dans ce salon."
   }
 }

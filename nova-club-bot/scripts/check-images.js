@@ -13,7 +13,7 @@ const MAX_ASSET_BYTES = 25 * 1024 * 1024; // limite Cloudflare par fichier stati
 const HEAVY_BYTES = 10 * 1024 * 1024; // au-delà, Discord peut être lent à afficher le GIF
 
 // Seules les images de la position choisie (banner_position) sont vérifiées.
-const position = String(config.banner_position ?? "haut_encadre").toLowerCase();
+const position = String(config.banner_position ?? "fichier").toLowerCase();
 const INACTIVE_KEY = position === "encadre" ? "banner_haut_url" : "banner_url";
 
 function collectUrls(obj, prefix = "", out = []) {

@@ -19,6 +19,7 @@ import {
 } from "./discord.js";
 import { annonceFromSubmit, annonceModal, annonceSummary, isAnnonceModal } from "./annonce.js";
 import { PANELS, bannerUrlOf, mediaReport, ticketSelectRow, unfurlReport } from "./panels.js";
+import { attachmentLine, publishMessage } from "./publish.js";
 import { askCloseConfirmation, cancelClose, claimTicket, closeTicket, openTicket } from "./tickets.js";
 import { verifyDiscordRequest } from "./verify.js";
 
@@ -90,8 +91,9 @@ function mediaLine(item) {
 
 // Résumé de ce que Discord a lu après publication : images d'encadré (réponse immédiate) et
 // bannière du haut (Discord crée son aperçu après coup : on attend un peu puis on relit le message).
-async function mediaLines(env, channelId, body, sent) {
+async function mediaLines(env, channelId, body, { sent, attachment }) {
   const lines = mediaReport(sent).map(mediaLine);
+  if (attachment) lines.unshift(await attachmentLine(env, channelId, sent, attachment));
   const bannerUrl = bannerUrlOf(body.content);
   if (bannerUrl && sent?.id) {
     await sleep(Number(env.UNFURL_WAIT_MS ?? 3000));
@@ -123,8 +125,8 @@ async function handleCommand(interaction, env, ctx) {
   const channelId = interaction.data.options?.find((o) => o.name === "salon")?.value ?? interaction.channel_id;
   runDeferred(ctx, interaction, async (ready) => {
     const body = panel.build();
-    const sent = await discord(env, "POST", `/channels/${channelId}/messages`, { body });
-    const lines = [fill(panel.published(), { channel: `<#${channelId}>` }), ...(await mediaLines(env, channelId, body, sent))];
+    const published = await publishMessage(env, interaction, channelId, body);
+    const lines = [fill(panel.published(), { channel: `<#${channelId}>` }), ...(await mediaLines(env, channelId, body, published))];
     await ready;
     await editOriginal(interaction, { content: lines.join("\n") });
   });
@@ -137,8 +139,8 @@ function handleModalSubmit(interaction, env, ctx) {
   if (!isAdmin(interaction.member)) return ephemeral(config.errors.admin_only);
   runDeferred(ctx, interaction, async (ready) => {
     const { channelId, body, ping } = annonceFromSubmit(interaction);
-    const sent = await discord(env, "POST", `/channels/${channelId}/messages`, { body });
-    const media = await mediaLines(env, channelId, body, sent);
+    const published = await publishMessage(env, interaction, channelId, body);
+    const media = await mediaLines(env, channelId, body, published);
     await ready;
     await editOriginal(interaction, { content: [...annonceSummary(channelId, ping), ...media].join("\n") });
   });

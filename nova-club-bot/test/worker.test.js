@@ -15,6 +15,18 @@ const publicKeyHex = Buffer.from(await crypto.subtle.exportKey("raw", keys.publi
 let calls;
 let kv;
 let routes;
+let assetCalls;
+let assets; // { missing: Set, none: bool }
+const GIF_BYTES = Uint8Array.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 2, 3, 4, 5, 6, 7, 8]);
+// Les messages publiés en « fichier » partent en multipart/form-data : on relit payload_json et le fichier joint.
+function parseBody(raw) {
+  if (raw instanceof FormData) {
+    const payload = JSON.parse(raw.get("payload_json"));
+    Object.defineProperty(payload, "__file", { value: raw.get("files[0]"), enumerable: false });
+    return payload;
+  }
+  return JSON.parse(raw);
+}
 
 function makeEnv() {
   return {
@@ -26,6 +38,16 @@ function makeEnv() {
     TICKET_CATEGORY_ID: "700000000000000007",
     LOG_CHANNEL_ID: "800000000000000008",
     UNFURL_WAIT_MS: "0", // pas d'attente dans les tests
+    ASSETS: assets.none
+      ? undefined
+      : {
+          fetch: async (req) => {
+            const path = new URL(req.url).pathname;
+            assetCalls.push(path);
+            if (assets.missing.has(path)) return new Response("introuvable", { status: 404 });
+            return new Response(GIF_BYTES, { headers: { "content-type": "image/gif" } });
+          },
+        },
     TICKETS: {
       get: async (k) => kv.get(k) ?? null,
       put: async (k, v) => void kv.set(k, v),
@@ -35,13 +57,16 @@ function makeEnv() {
 }
 
 beforeEach(() => {
+  botSetup = { everyone: BASE_PERMS, botRole: 0n, overwrites: [] };
   calls = [];
   kv = new Map();
   routes = [];
+  assetCalls = [];
+  assets = { missing: new Set(), none: false };
   globalThis.fetch = async (url, init = {}) => {
     const call = { url: String(url), method: init.method ?? "GET", body: init.body };
     calls.push(call);
-    for (const [method, re, reply] of routes) {
+    for (const [method, re, reply] of [...routes, ...defaultRoutes()]) {
       if (method === call.method && re.test(call.url)) return reply(call);
     }
     return new Response(null, { status: 204 });
@@ -49,6 +74,18 @@ beforeEach(() => {
 });
 
 const route = (method, re, reply) => routes.push([method, re, reply]);
+// Permissions du bot dans un salon autre que celui de la commande (calcul : salon + membre + rôles). Par défaut : tout est permis.
+const ATTACH = 1n << 15n;
+const BASE_PERMS = (1n << 10n) | (1n << 11n) | (1n << 14n) | (1n << 15n) | (1n << 16n);
+let botSetup = { everyone: BASE_PERMS, botRole: 0n, overwrites: [] };
+const defaultRoutes = () => [
+  ["GET", /\/channels\/\d+$/, () => jsonRes({ id: "999000000000000000", permission_overwrites: botSetup.overwrites })],
+  ["GET", /\/guilds\/\d+\/members\/\d+$/, () => jsonRes({ roles: ["777000000000000007"] })],
+  ["GET", /\/guilds\/\d+\/roles$/, () => jsonRes([
+    { id: GUILD, permissions: String(botSetup.everyone) },
+    { id: "777000000000000007", permissions: String(botSetup.botRole) },
+  ])],
+];
 const jsonRes = (data, status = 200) => new Response(JSON.stringify(data), { status });
 
 async function send(interaction, { badSignature = false } = {}) {
@@ -80,9 +117,10 @@ const V2 = 1 << 15; // ancienne mise en page (composants V2)
 const ORANGE = 0xff6b1a;
 async function publish(name, extra = []) {
   calls = [];
+  assetCalls = [];
   await send({ type: 2, member: admin, channel_id: "1", data: { name, options: [{ name: "salon", type: 7, value: "999000000000000000" }, ...extra] } });
   const post = calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/999000000000000000/messages"));
-  return { body: post && JSON.parse(post.body), edit: JSON.parse(originalEdit().body).content };
+  return { body: post && parseBody(post.body), edit: JSON.parse(originalEdit().body).content };
 }
 const withQuestionsChannel = async (fn) => {
   const config = (await import("../config.json", { with: { type: "json" } })).default;
@@ -97,15 +135,24 @@ const buttons = (body) => (body.components ?? []).flatMap((r) => r.components);
 const HOST = "https://nova-club-bot.novaclub.workers.dev/";
 const BAR = 0x2b2d31; // couleur du fond de Discord : barre latérale invisible
 // Mise en page commune : un seul message, pas de composants V2, encadré principal à barre orange.
-// "haut_encadre" (défaut) : 1er encadré = bannière « -haut » seule (sans titre ni texte ni pied de page, barre #2B2D31),
-//                           2e encadré = l'encadré habituel ; pas de contenu texte.
-// "haut"    : bannière « -haut » = contenu du message, seule sur sa ligne, rien dans l'encadré.
-// "encadre" : ancienne bannière dans l'encadré (embed.image), pas de contenu.
+// "fichier" (défaut) : GIF « -haut » = pièce jointe (multipart), aucun lien dans le texte, un seul encadré (le texte).
+// "haut_encadre" : 1er encadré = bannière seule (barre #2B2D31), 2e encadré = l'encadré habituel.
+// "haut"    : adresse de la bannière = contenu du message, seule sur sa ligne.
+// "encadre" : ancienne bannière dans l'encadré (embed.image).
 // Renvoie l'encadré principal.
-function assertLayout(body, banner, title, position = "haut_encadre") {
+function assertLayout(body, banner, title, position = "fichier") {
   assert.equal(body.flags, undefined);
   let e;
-  if (position === "haut_encadre") {
+  if (position === "fichier") {
+    assert.equal(body.content, undefined);
+    assert.deepEqual(body.attachments, [{ id: 0, filename: "banniere.gif" }]);
+    assert.equal(body.__file.name, "banniere.gif");
+    assert.equal(body.__file.type, "image/gif");
+    assert.equal(assetCalls.at(-1), `/${banner}-haut.gif`); // lu dans les fichiers statiques, pas par une URL externe
+    assert.ok(!JSON.stringify(body).includes("workers.dev/banniere")); // aucun lien d'image dans le message
+    e = body.embeds[0];
+    assert.equal(e.image, undefined);
+  } else if (position === "haut_encadre") {
     assert.equal(body.content, undefined);
     const [first, main] = body.embeds;
     assert.deepEqual(first, { color: BAR, image: { url: `${HOST}${banner}-haut.gif?v=2` } }); // l'image, rien d'autre
@@ -195,14 +242,14 @@ test("/panel-tickets signale l'identifiant du salon questions à remplacer", asy
 
 test("/panel-formation : encadré avec prix et lien, 2e encadré image, bouton lien", async () => {
   const { body } = await publish("panel-formation");
-  assert.equal(body.embeds.length, 3); // bannière, encadré, image de présentation
+  assert.equal(body.embeds.length, 2); // encadré de texte + image de présentation (la bannière est une pièce jointe)
   const e = assertLayout(body, "banniere-formation", "🎓 Formation dropshipping eBay & Etsy");
   assert.match(e.description, /eBay\*\* et \*\*Etsy/);
   assert.match(e.description, /communauté privée/);
   assert.match(e.description, /Nova Autopilot/);
   assert.match(e.description, /À REMPLACER \(ex\. 97 €\)/);
   assert.match(e.description, /https:\/\/exemple\.com\/a-remplacer-formation/);
-  const second = body.embeds[2];
+  const second = body.embeds[1];
   assert.equal(second.color, ORANGE);
   assert.match(second.image.url, /decouverte-formation\.png\?v=2$/);
   const [btn] = buttons(body);
@@ -250,7 +297,7 @@ test("une image remplacée change d'adresse quand images_version change", async 
 test("position « encadre » : GIF d'encadré reconnu animé par Discord", () =>
   withPosition("encadre", async () => {
     route("POST", /999000000000000000\/messages/, (call) => {
-      const sent = JSON.parse(call.body);
+      const sent = parseBody(call.body);
       sent.embeds[0].image = { ...sent.embeds[0].image, content_type: "image/gif", width: 600, height: 200, flags: 1 << 5 };
       return jsonRes(sent);
     });
@@ -261,7 +308,7 @@ test("position « encadre » : GIF d'encadré reconnu animé par Discord", () =>
 test("position « encadre » : GIF reconnu mais non animé signalé", () =>
   withPosition("encadre", async () => {
     route("POST", /999000000000000000\/messages/, (call) => {
-      const sent = JSON.parse(call.body);
+      const sent = parseBody(call.body);
       sent.embeds[0].image = { ...sent.embeds[0].image, content_type: "image/gif", width: 600, height: 200, flags: 0 };
       return jsonRes(sent);
     });
@@ -271,9 +318,9 @@ test("position « encadre » : GIF reconnu mais non animé signalé", () =>
 
 // Position « haut » : Discord crée l'aperçu de l'adresse après coup, le bot relit donc le message.
 const unfurlRoutes = (unfurl) => {
-  route("POST", /999000000000000000\/messages$/, (call) => jsonRes({ id: "888000000000000000", ...JSON.parse(call.body) }));
+  route("POST", /999000000000000000\/messages$/, (call) => jsonRes({ id: "888000000000000000", ...parseBody(call.body) }));
   route("GET", /999000000000000000\/messages\/888000000000000000$/, (call) => {
-    const posted = JSON.parse(calls.find((c) => c.method === "POST" && c.url.endsWith("/messages")).body);
+    const posted = parseBody(calls.find((c) => c.method === "POST" && c.url.endsWith("/messages")).body);
     return jsonRes({ id: "888000000000000000", ...posted, embeds: [...(unfurl ? [unfurl(posted.content)] : []), ...posted.embeds] });
   });
 };
@@ -303,16 +350,16 @@ test("position « haut » : l'aperçu d'un autre lien du texte n'est pas pris po
   }));
 
 // Mode par défaut « haut_encadre » : Discord lit l'image du premier encadré dès la publication (pas de relecture).
-test("position « haut_encadre » : la bannière du premier encadré est reconnue animée, sans relire le message", async () => {
+test("position « haut_encadre » : la bannière du premier encadré est reconnue animée, sans relire le message", () => withPosition("haut_encadre", async () => {
   route("POST", /999000000000000000\/messages$/, (call) => {
-    const sent = JSON.parse(call.body);
+    const sent = parseBody(call.body);
     sent.embeds[0].image = { ...sent.embeds[0].image, content_type: "image/gif", width: 800, height: 120, flags: 1 << 5 };
     return jsonRes({ id: "888000000000000000", ...sent });
   });
   const { edit } = await publish("panel-faq");
   assert.match(edit, /banniere-faq-haut\.gif : GIF animé reconnu/);
   assert.ok(!calls.some((c) => c.method === "GET"));
-});
+}));
 
 test("tous les panneaux respectent les limites de Discord", async () => {
   await withQuestionsChannel(async () => {
@@ -388,7 +435,7 @@ test("/annonce : options → formulaire → publication (bannière par défaut, 
   const r = await submitAnnonce(modal.data.data.custom_id, "Titre de test", "**Gras** et une liste :\n- un\n- deux");
   assert.equal(r.data.type, 5);
   const post = calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/999000000000000000/messages"));
-  const body = JSON.parse(post.body);
+  const body = parseBody(post.body);
   const e = assertLayout(body, "banniere-annonce", "Titre de test");
   assert.equal(e.description, "**Gras** et une liste :\n- un\n- deux");
   assert.equal(body.content, undefined); // pas de ping : aucun contenu texte
@@ -404,10 +451,12 @@ test("/annonce : salon par défaut = salon actuel, image choisie, @everyone", as
   calls = [];
   await submitAnnonce(modal.data.data.custom_id, "T", "Texte");
   const post = calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages"));
-  const body = JSON.parse(post.body);
-  assert.equal(body.embeds[0].image.url, `${HOST}banniere-outils-haut.gif?v=2`); // 1er encadré = bannière seule
-  assert.equal(body.embeds[0].title, undefined);
-  assert.equal(body.content, "@everyone"); // le ping reste dans le contenu, avant les encadrés
+  const body = parseBody(post.body);
+  assert.deepEqual(body.attachments, [{ id: 0, filename: "banniere.gif" }]); // la bannière choisie est jointe
+  assert.equal(assetCalls.at(-1), "/banniere-outils-haut.gif");
+  assert.equal(body.embeds.length, 1);
+  assert.equal(body.embeds[0].image, undefined);
+  assert.equal(body.content, "@everyone"); // le ping reste dans le contenu du message
   assert.deepEqual(body.allowed_mentions, { parse: ["everyone"] });
   assert.match(JSON.parse(originalEdit().body).content, /Mentionner @everyone/);
 });
@@ -419,7 +468,7 @@ test("/annonce : ping d'un rôle précis, image « aucune »", async () => {
   });
   calls = [];
   await submitAnnonce(modal.data.data.custom_id, "T", "Texte");
-  const body = JSON.parse(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
+  const body = parseBody(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
   assert.equal(body.content, "<@&555000000000000000>");
   assert.deepEqual(body.allowed_mentions, { roles: ["555000000000000000"] });
   assert.equal(body.embeds.length, 1); // image « aucune » : pas d'encadré de bannière
@@ -574,16 +623,15 @@ test("banner_position « encadre » : /annonce met la bannière dans l'encadré 
     const modal = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce", options: [{ name: "ping", type: 3, value: "everyone" }] } });
     calls = [];
     await submitAnnonce(modal.data.data.custom_id, "T", "Texte");
-    const body = JSON.parse(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
+    const body = parseBody(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
     assert.equal(body.content, "@everyone");
     assert.equal(body.embeds[0].image.url, `${HOST}banniere-annonce.gif?v=2`);
   }));
 
 const PANEL_NAMES = { "panel-infos": "informations", "panel-reglement": "reglement", "panel-tickets": "tickets", "panel-formation": "formation", "panel-outils": "outils", "panel-faq": "faq", "panel-autopilot": "autopilot" };
 
-test("banner_position « haut_encadre » (défaut) : tous les panneaux = encadré bannière seul + encadré habituel", () =>
-  withQuestionsChannel(async (config) => {
-    assert.equal(config.banner_position, "haut_encadre");
+test("banner_position « haut_encadre » : tous les panneaux = encadré bannière seul + encadré habituel", () =>
+  withPosition("haut_encadre", () => withQuestionsChannel(async () => {
     for (const [cmd, n] of Object.entries(PANEL_NAMES)) {
       const { body } = await publish(cmd);
       assert.equal(body.content, undefined, cmd);
@@ -592,10 +640,10 @@ test("banner_position « haut_encadre » (défaut) : tous les panneaux = encadr�
       assert.equal(body.embeds[1].color, ORANGE, cmd);
       assert.equal(body.embeds[1].image, undefined, cmd);
     }
-  }));
+  })));
 
 test("banner_position « haut_encadre » : menus et boutons restent sous le message", () =>
-  withQuestionsChannel(async () => {
+  withPosition("haut_encadre", () => withQuestionsChannel(async () => {
     const tickets = (await publish("panel-tickets")).body;
     assert.equal(tickets.components[0].components[0].custom_id, "ticket:create");
     const rules = (await publish("panel-reglement")).body;
@@ -603,18 +651,18 @@ test("banner_position « haut_encadre » : menus et boutons restent sous le mess
     const formation = (await publish("panel-formation")).body;
     assert.equal(formation.components[0].components[0].url, "https://exemple.com/a-remplacer-formation");
     assert.equal(formation.embeds[2].image.url, `${HOST}decouverte-formation.png?v=2`);
-  }));
+  })));
 
-test("banner_position « haut_encadre » : la couleur du 1er encadré est réglable (banner_embed_color)", async () => {
-  const config = (await import("../config.json", { with: { type: "json" } })).default;
-  config.banner_embed_color = "#313338";
-  try {
-    const { body } = await publish("panel-faq");
-    assert.equal(body.embeds[0].color, 0x313338);
-  } finally {
-    config.banner_embed_color = "#2B2D31";
-  }
-});
+test("banner_position « haut_encadre » : la couleur du 1er encadré est réglable (banner_embed_color)", () =>
+  withPosition("haut_encadre", async (config) => {
+    config.banner_embed_color = "#313338";
+    try {
+      const { body } = await publish("panel-faq");
+      assert.equal(body.embeds[0].color, 0x313338);
+    } finally {
+      config.banner_embed_color = "#2B2D31";
+    }
+  }));
 
 test("banner_position « haut » : /panel-formation garde decouverte-formation.png dans l'encadré", () =>
   withPosition("haut", async () => {
@@ -641,33 +689,209 @@ test("banner_position « haut » : /annonce garde le ping avant l'adresse, sur u
     const modal = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce", options: [{ name: "ping", type: 3, value: "everyone" }] } });
     calls = [];
     await submitAnnonce(modal.data.data.custom_id, "T", "Texte");
-    const body = JSON.parse(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
+    const body = parseBody(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
     assert.equal(body.content, `@everyone\n${HOST}banniere-annonce-haut.gif?v=2`);
     assert.deepEqual(body.allowed_mentions, { parse: ["everyone"] });
   }));
 
-test("banner_position « haut_encadre » : /annonce sans image choisie → bannière par défaut, ping dans le contenu", async () => {
+test("banner_position « haut_encadre » : /annonce sans image choisie → bannière par défaut, ping dans le contenu", () => withPosition("haut_encadre", async () => {
   const modal = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce", options: [{ name: "role", type: 8, value: "555000000000000000" }] } });
   calls = [];
   await submitAnnonce(modal.data.data.custom_id, "Titre", "Texte");
-  const body = JSON.parse(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
+  const body = parseBody(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
   assert.equal(body.content, "<@&555000000000000000>");
   assert.deepEqual(body.allowed_mentions, { roles: ["555000000000000000"] });
   assert.deepEqual(body.embeds[0], { color: BAR, image: { url: `${HOST}banniere-annonce-haut.gif?v=2` } });
   assert.equal(body.embeds[1].title, "Titre");
   assert.equal(body.embeds[1].color, ORANGE);
-});
+}));
 
 test("banner_position invalide → message clair, rien n'est publié", () =>
   withPosition("dessous", async () => {
     const { body, edit } = await publish("panel-faq");
     assert.equal(body, undefined);
-    assert.match(edit, /« banner_position » doit valoir "haut_encadre", "haut" ou "encadre"/);
+    assert.match(edit, /« banner_position » doit valoir "fichier", "haut_encadre", "haut" ou "encadre"/);
   }));
 
 test("le menu des tickets est remis à zéro sans toucher au message (bannière et encadré conservés)", async () => {
+  route("POST", /\/guilds\/\d+\/channels$/, () => jsonRes({ id: "910000000000000000" }));
   const r = await send({ type: 3, member, message: { flags: 0 }, data: { custom_id: "ticket:create", component_type: 3, values: ["support"] } });
   assert.equal(r.data.type, 7);
   assert.equal(r.data.data.content, undefined); // seul le menu est renvoyé : le contenu et l'encadré restent
   assert.equal(r.data.data.embeds, undefined);
+});
+
+// ── Mode « fichier » (défaut) : GIF « -haut » envoyé comme pièce jointe ──────
+test("« fichier » est le mode par défaut", async () => {
+  const config = (await import("../config.json", { with: { type: "json" } })).default;
+  assert.equal(config.banner_position, "fichier");
+});
+
+test("« fichier » : tous les panneaux = pièce jointe en multipart, un seul encadré de texte, aucun lien d'image", () =>
+  withQuestionsChannel(async () => {
+    for (const [cmd, n] of Object.entries(PANEL_NAMES)) {
+      const { body } = await publish(cmd);
+      const post = calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/999000000000000000/messages"));
+      assert.ok(post.body instanceof FormData, cmd); // multipart/form-data
+      assert.deepEqual(body.attachments, [{ id: 0, filename: "banniere.gif" }], cmd);
+      assert.equal(body.__file.name, "banniere.gif", cmd);
+      assert.equal(body.__file.type, "image/gif", cmd);
+      assert.deepEqual(new Uint8Array(await body.__file.arrayBuffer()), GIF_BYTES, cmd); // octets lus dans ASSETS
+      assert.deepEqual(assetCalls, [`/banniere-${n}-haut.gif`], cmd);
+      assert.equal(body.content, undefined, cmd); // pas de texte, donc pas de lien
+      assert.equal(body.embeds.length, cmd === "panel-formation" ? 2 : 1, cmd);
+      assert.equal(body.embeds[0].color, ORANGE, cmd);
+      assert.equal(body.embeds[0].image, undefined, cmd);
+    }
+  }));
+
+test("« fichier » : aucune requête vers une URL d'image externe (lecture par le binding ASSETS)", async () => {
+  await publish("panel-faq");
+  assert.ok(calls.every((c) => !c.url.includes("novaclub.workers.dev")));
+  assert.deepEqual(assetCalls, ["/banniere-faq-haut.gif"]);
+});
+
+test("« fichier » : menus et boutons restent sous le message (dans payload_json)", () =>
+  withQuestionsChannel(async () => {
+    const tickets = (await publish("panel-tickets")).body;
+    assert.equal(tickets.components[0].components[0].custom_id, "ticket:create");
+    const rules = (await publish("panel-reglement")).body;
+    assert.equal(rules.components[0].components[0].custom_id, "rules:accept");
+    const formation = (await publish("panel-formation")).body;
+    assert.equal(formation.components[0].components[0].url, "https://exemple.com/a-remplacer-formation");
+    assert.equal(formation.embeds[1].image.url, `${HOST}decouverte-formation.png?v=2`); // image de la formation dans l'encadré
+  }));
+
+test("« fichier » : /annonce garde le ping dans le contenu, la bannière est jointe", async () => {
+  const modal = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce", options: [{ name: "role", type: 8, value: "555000000000000000" }] } });
+  calls = [];
+  await submitAnnonce(modal.data.data.custom_id, "Titre", "Texte");
+  const body = parseBody(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
+  assert.equal(body.content, "<@&555000000000000000>");
+  assert.deepEqual(body.allowed_mentions, { roles: ["555000000000000000"] });
+  assert.deepEqual(body.attachments, [{ id: 0, filename: "banniere.gif" }]);
+  assert.equal(assetCalls.at(-1), "/banniere-annonce-haut.gif");
+  assert.equal(body.embeds.length, 1);
+  assert.equal(body.embeds[0].title, "Titre");
+});
+
+test("« fichier » : /annonce sans image → message JSON classique, aucune lecture de fichier", async () => {
+  const modal = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce", options: [{ name: "image", type: 3, value: "aucune" }] } });
+  calls = [];
+  await submitAnnonce(modal.data.data.custom_id, "T", "Texte");
+  const post = calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages"));
+  assert.equal(typeof post.body, "string");
+  assert.equal(JSON.parse(post.body).attachments, undefined);
+  assert.deepEqual(assetCalls, []);
+});
+
+// Relecture du message après publication
+const readBackRoutes = (attachment) => {
+  route("POST", /999000000000000000\/messages$/, () => jsonRes({ id: "888000000000000000" }));
+  route("GET", /999000000000000000\/messages\/888000000000000000$/, () => jsonRes({ id: "888000000000000000", attachments: attachment ? [attachment] : [] }));
+};
+const ATT = { id: "1", filename: "banniere.gif", content_type: "image/gif", size: 2 * 1024 * 1024, width: 800, height: 120 };
+
+test("« fichier » : relit le message et confirme une pièce jointe image/gif animée", async () => {
+  readBackRoutes({ ...ATT, flags: 1 << 5 });
+  const { edit } = await publish("panel-faq");
+  assert.equal(calls.filter((c) => c.method === "GET" && c.url.endsWith("/messages/888000000000000000")).length, 1);
+  assert.match(edit, /banniere\.gif : pièce jointe reconnue par Discord \(image\/gif, animée, 2,0 Mo\)/);
+});
+
+test("« fichier » : GIF reconnu mais non signalé animé", async () => {
+  readBackRoutes({ ...ATT, flags: 0 });
+  const { edit } = await publish("panel-faq");
+  assert.match(edit, /NON signalée comme animée/);
+});
+
+test("« fichier » : type reconnu différent de image/gif", async () => {
+  readBackRoutes({ ...ATT, content_type: "image/png", flags: 0 });
+  const { edit } = await publish("panel-faq");
+  assert.match(edit, /« image\/png » au lieu de image\/gif/);
+});
+
+test("« fichier » : pièce jointe absente du message relu", async () => {
+  readBackRoutes(null);
+  const { edit } = await publish("panel-faq");
+  assert.match(edit, /n'apparaît pas dans le message relu/);
+});
+
+// Permission « Joindre des fichiers »
+test("« fichier » : permission manquante dans le salon de la commande → message clair, rien n'est envoyé", async () => {
+  await send({ type: 2, member: admin, channel_id: "1", app_permissions: String(BASE_PERMS & ~ATTACH), data: { name: "panel-faq" } });
+  assert.match(JSON.parse(originalEdit().body).content, /« Joindre des fichiers » dans <#1>/);
+  assert.ok(!calls.some((c) => c.method === "POST" && c.url.endsWith("/messages")));
+  assert.deepEqual(assetCalls, []);
+});
+
+test("« fichier » : permission présente dans le salon de la commande → publié", async () => {
+  await send({ type: 2, member: admin, channel_id: "1", app_permissions: String(BASE_PERMS), data: { name: "panel-faq" } });
+  assert.ok(calls.some((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")));
+  assert.ok(!calls.some((c) => /\/guilds\/\d+\/roles$/.test(c.url))); // pas de calcul inutile
+});
+
+test("« fichier » : permission calculée pour un autre salon — refusée par une règle du salon", async () => {
+  botSetup.overwrites = [{ id: APP, type: 1, allow: "0", deny: String(ATTACH) }];
+  const { body, edit } = await publish("panel-faq");
+  assert.equal(body, undefined);
+  assert.match(edit, /« Joindre des fichiers » dans <#999000000000000000>/);
+});
+
+test("« fichier » : permission calculée — refusée à @everyone mais rendue par le rôle du bot dans le salon", async () => {
+  botSetup.everyone = BASE_PERMS & ~ATTACH;
+  botSetup.botRole = ATTACH;
+  const { body } = await publish("panel-faq");
+  assert.ok(body);
+});
+
+test("« fichier » : permission calculée — le rôle du bot n'a pas la permission", async () => {
+  botSetup.everyone = BASE_PERMS & ~ATTACH;
+  const { body, edit } = await publish("panel-faq");
+  assert.equal(body, undefined);
+  assert.match(edit, /Joindre des fichiers/);
+});
+
+test("« fichier » : un administrateur n'est pas bloqué par les règles de salon", async () => {
+  botSetup.everyone = 1n << 3n;
+  botSetup.overwrites = [{ id: GUILD, type: 0, allow: "0", deny: String(ATTACH) }];
+  const { body } = await publish("panel-faq");
+  assert.ok(body);
+});
+
+test("« fichier » : Discord refuse l'envoi avec fichier (403) → message clair", async () => {
+  route("POST", /999000000000000000\/messages$/, () => jsonRes({ code: 50013, message: "Missing Permissions" }, 403));
+  const { edit } = await publish("panel-faq");
+  assert.match(edit, /refusé l'envoi du message avec la bannière jointe/);
+});
+
+test("« fichier » : binding ASSETS absent → message clair", async () => {
+  assets.none = true;
+  const { body, edit } = await publish("panel-faq");
+  assert.equal(body, undefined);
+  assert.match(edit, /binding ASSETS absent/);
+});
+
+test("« fichier » : image absente de public/ → message clair avec le nom du fichier", async () => {
+  assets.missing.add("/banniere-faq-haut.gif");
+  const { body, edit } = await publish("panel-faq");
+  assert.equal(body, undefined);
+  assert.match(edit, /Image introuvable dans public\/ : banniere-faq-haut\.gif/);
+});
+
+test("« fichier » : image plus lourde que la limite d'envoi du serveur → message clair", async () => {
+  await send({ type: 2, member: admin, channel_id: "1", attachment_size_limit: 4, app_permissions: String(BASE_PERMS), data: { name: "panel-faq" } });
+  assert.match(JSON.parse(originalEdit().body).content, /plus que la limite d'envoi de Discord/);
+  assert.ok(!calls.some((c) => c.method === "POST" && c.url.endsWith("/messages")));
+});
+
+test("les autres modes restent disponibles et n'utilisent pas ASSETS", async () => {
+  for (const mode of ["haut_encadre", "haut", "encadre"]) {
+    await withPosition(mode, async () => {
+      const { body } = await publish("panel-faq");
+      assert.ok(body, mode);
+      assert.deepEqual(assetCalls, [], mode);
+      assert.equal(body.attachments, undefined, mode);
+    });
+  }
 });

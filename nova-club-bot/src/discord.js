@@ -164,3 +164,36 @@ export function explainError(err) {
   }
   return e.generic;
 }
+
+// ── Permissions du bot dans un salon ────────────────────────────────────────
+// Si le salon visé est celui de la commande, Discord fournit directement les permissions du bot
+// (interaction.app_permissions). Sinon on les calcule : rôles du bot + règles propres au salon.
+export async function botPermissionsIn(env, interaction, channelId) {
+  if (channelId === interaction.channel_id && interaction.app_permissions != null) {
+    return BigInt(interaction.app_permissions);
+  }
+  const guildId = interaction.guild_id;
+  const botId = interaction.application_id;
+  const [channel, member, roles] = await Promise.all([
+    discord(env, "GET", `/channels/${channelId}`),
+    discord(env, "GET", `/guilds/${guildId}/members/${botId}`),
+    discord(env, "GET", `/guilds/${guildId}/roles`),
+  ]);
+  const mine = new Set(member.roles ?? []);
+  const rolePerms = (id) => BigInt(roles.find((r) => r.id === id)?.permissions ?? 0);
+
+  let perms = rolePerms(guildId); // @everyone
+  for (const id of mine) perms |= rolePerms(id);
+  if (perms & Perm.ADMINISTRATOR) return ~0n;
+
+  const rules = channel.permission_overwrites ?? [];
+  const apply = (list) => {
+    const deny = list.reduce((a, o) => a | BigInt(o.deny), 0n);
+    const allow = list.reduce((a, o) => a | BigInt(o.allow), 0n);
+    perms = (perms & ~deny) | allow;
+  };
+  apply(rules.filter((o) => o.id === guildId)); // @everyone
+  apply(rules.filter((o) => o.type === 0 && mine.has(o.id))); // rôles du bot
+  apply(rules.filter((o) => o.type === 1 && o.id === botId)); // le bot lui-même
+  return perms;
+}

@@ -13,16 +13,27 @@ Où est la bannière ? Le réglage **`banner_position`** de `config.json` décid
 
 | Valeur | Effet | Fichiers utilisés |
 |---|---|---|
-| `"haut_encadre"` (**par défaut**) | **deux encadrés dans le même message** : le 1er ne contient **que** l'image de la bannière (ni titre, ni texte, ni pied de page) avec la couleur `#2B2D31` pour que sa barre latérale soit invisible ; le 2e est l'encadré habituel (barre orange) | `banniere-…-haut.gif` |
-| `"haut"` | l'adresse de la bannière est écrite dans le **texte du message**, seule sur sa ligne (Discord doit en faire un aperçu) | `banniere-…-haut.gif` |
+| `"fichier"` (**par défaut**) | le bot lit le GIF « -haut » dans ses fichiers (`public/`) et l'envoie comme **pièce jointe du même message** : pas de lien dans le texte, pas d'encadré réservé à l'image. Le message ne contient que l'encadré de texte (titre, texte, barre orange) | `banniere-…-haut.gif` |
+| `"haut_encadre"` | **deux encadrés** : le 1er ne contient que l'image (couleur `#2B2D31`, barre invisible), le 2e est l'encadré habituel | `banniere-…-haut.gif` |
+| `"haut"` | l'adresse de la bannière est écrite dans le **texte du message** (Discord doit en faire un aperçu : ça ne marche pas toujours) | `banniere-…-haut.gif` |
 | `"encadre"` | l'ancienne bannière est **dans l'encadré, en bas** | `banniere-….gif` (les anciennes) |
 
 Pour changer de mode : modifie `banner_position`, redéploie (`npx wrangler deploy`), puis republie les panneaux. Les deux séries d'images restent dans `public/`.
 
-> **Pourquoi `"haut_encadre"` ?** Le mode `"haut"` repose sur l'aperçu de lien de Discord : quand le message contient aussi un encadré, Discord n'affiche parfois pas l'aperçu et on ne voit que l'adresse en bleu.
-> Une image placée **dans un encadré** s'affiche toujours (et un GIF y est animé).
-> Détail du mode par défaut : la barre latérale du 1er encadré a la couleur du fond du **thème sombre** de Discord (`#2B2D31`, réglable avec `banner_embed_color`) ; sur le thème clair, un fin trait gris peut rester visible.
-> Après chaque publication, le message de confirmation te dit si Discord a bien lu la bannière et reconnu le GIF comme animé.
+**Comment fonctionne le mode `"fichier"`** : à la publication d'un panneau (`/panel-*`, `/annonce`), le Worker
+1. vérifie que le bot a la permission **« Joindre des fichiers »** dans le salon (sinon : message d'erreur clair, rien n'est publié) ;
+2. lit le GIF dans `public/` grâce au *binding* `ASSETS` de `wrangler.toml` (aucune adresse externe) ;
+3. envoie **un seul message** à Discord en `multipart/form-data` : `payload_json` (contenu, encadrés, menus/boutons, mentions, `attachments: [{ id: 0, filename: "banniere.gif" }]`) et `files[0]` (le GIF) ;
+4. **relit le message** avec l'API et te dit dans le message de confirmation si le GIF est bien reconnu comme pièce jointe `image/gif` **animée**, par exemple
+   `🎞️ banniere.gif : pièce jointe reconnue par Discord (image/gif, animée, 1,8 Mo).`
+
+Pour `/annonce`, le ping (`@everyone` ou rôle) reste dans le **texte du message**. `/panel-formation` garde `decouverte-formation.png` en grande image dans l'encadré.
+
+> **Limites du mode `"fichier"`**
+> - **Place de l'image** : l'API ne dit pas où Discord dessine la pièce jointe. Elle est censée apparaître au-dessus de l'encadré ; **regarde le salon après la première publication**. Si elle s'affiche *sous* l'encadré, voir [Si la pièce jointe s'affiche sous l'encadré](#si-la-pièce-jointe-saffiche-sous-lencadré).
+> - **Poids** : un GIF joint doit rester sous la limite d'envoi du serveur (20 Mo par défaut ; le bot vérifie et te prévient). Vise moins de 10 Mo.
+> - **Pièce jointe** : c'est un vrai fichier du message (les membres peuvent l'ouvrir et la télécharger), et elle compte parmi les fichiers du salon.
+> - **Anciens messages** : changer de mode ne modifie pas les panneaux déjà publiés ; republie-les.
 
 | Commande / bouton | Effet |
 |---|---|
@@ -47,7 +58,7 @@ Les images sont dans le dossier [`public/`](public/) et servies gratuitement par
 par exemple `https://nova-club-bot.novaclub.workers.dev/banniere-tickets.gif`. La page « en ligne ✅ » reste à la racine.
 Le bot ajoute `?v=2` à ces adresses quand il publie (réglage `images_version`) : cela force Discord à recharger une image que tu as remplacée.
 
-> **Tu mets à jour un bot déjà installé ?** Va directement à la section [Mise à jour : mode « haut_encadre »](#mise-à-jour--mode--haut_encadre-).
+> **Tu mets à jour un bot déjà installé ?** Va directement à la section [Mise à jour : bannière en pièce jointe](#mise-à-jour--bannière-en-pièce-jointe).
 
 ---
 
@@ -72,7 +83,7 @@ Le bot ajoute `?v=2` à ces adresses quand il publie (réglage `images_version`)
 17. [Déploiement automatique depuis GitHub](#17-déploiement-automatique-depuis-github)
 18. [Ce que cette méthode ne peut pas faire](#18-ce-que-cette-méthode-ne-peut-pas-faire)
 19. [Dépannage](#19-dépannage)
-20. [Mise à jour : mode « haut_encadre »](#mise-à-jour--mode--haut_encadre-)
+20. [Mise à jour : bannière en pièce jointe](#mise-à-jour--bannière-en-pièce-jointe)
 
 ---
 
@@ -310,9 +321,9 @@ Ouvre `config.json` avec le Bloc-notes ou VS Code. Les valeurs **À REMPLACER** 
 |---|---|
 | `color` | couleur de la barre des encadrés, `#FF6B1A` |
 | `…banner_url`, `formation.image_url` | adresses des images (dossier `public/`). Laisse `""` pour ne pas afficher d'image. |
-| `banner_position` | `"haut_encadre"` (défaut : encadré de bannière seule + encadré habituel), `"haut"` (adresse dans le texte du message) ou `"encadre"` (ancienne bannière dans l'encadré) |
-| `banner_embed_color` | couleur du 1er encadré en mode `"haut_encadre"` : `#2B2D31` = fond du thème sombre de Discord (barre invisible) |
-| `…banner_haut_url` | adresse de la bannière « -haut » de chaque panneau (modes `"haut_encadre"` et `"haut"`) ; `…banner_url` = l'ancienne bannière (position `"encadre"`) |
+| `banner_position` | `"fichier"` (défaut : GIF « -haut » en pièce jointe), `"haut_encadre"` (encadré de bannière seule + encadré habituel), `"haut"` (adresse dans le texte du message) ou `"encadre"` (ancienne bannière dans l'encadré) |
+| `banner_embed_color` | couleur du 1er encadré en mode `"haut_encadre"` uniquement : `#2B2D31` = fond du thème sombre de Discord (barre invisible) |
+| `…banner_haut_url` | adresse de la bannière « -haut » de chaque panneau (le **nom du fichier** doit exister dans `public/` ; modes `"fichier"`, `"haut_encadre"` et `"haut"`) ; `…banner_url` = l'ancienne bannière (mode `"encadre"`) |
 | `images_version` | numéro ajouté aux adresses (`?v=2`). **Augmente-le** (3, 4…) quand tu remplaces une image par une nouvelle version, puis redéploie et republie |
 | `annonce.images` | les choix de l'option `image` de `/annonce` (nom affiché + bannière). `default_image` = choix par défaut |
 | `infos.channels` | pour chaque salon : identifiant (`"id"`), emoji, description |
@@ -333,7 +344,7 @@ Dans les textes des encadrés : `**gras**`, `*italique*`, listes avec `- `, et `
 Le dossier `public/` doit contenir ces fichiers (noms exacts, en minuscules) :
 
 ```
-Bannières « -haut » ("haut_encadre", "haut")  Anciennes bannières ("encadre")
+Bannières « -haut » ("fichier", "haut_encadre", "haut")   Anciennes bannières ("encadre")
 banniere-tickets-haut.gif                banniere-tickets.gif
 banniere-reglement-haut.gif              banniere-reglement.gif
 banniere-informations-haut.gif           banniere-informations.gif
@@ -346,7 +357,7 @@ banniere-annonce-haut.gif                banniere-annonce.gif
 decouverte-formation.png   (image de /panel-formation, dans l'encadré, quelle que soit la position)
 ```
 
-`npm run check-images` ne contrôle que la série de la position choisie (plus `decouverte-formation.png`) : tant que tu es en `"haut_encadre"` ou `"haut"`, les anciennes bannières peuvent rester dans `public/` sans être vérifiées.
+`npm run check-images` ne contrôle que la série de la position choisie (plus `decouverte-formation.png`) : tant que tu es en `"fichier"`, `"haut_encadre"` ou `"haut"`, les anciennes bannières peuvent rester dans `public/` sans être vérifiées.
 
 - Vérifie-les avant de déployer : `npm run check-images -- --local` (présence, vrai GIF **animé**, poids).
 - Après le déploiement : `npm run check-images` télécharge chaque adresse en ligne et refait les mêmes contrôles.
@@ -422,6 +433,10 @@ Autres limites à connaître :
 | Le ticket ne se crée pas | Vérifie `TICKET_CATEGORY_ID` et que le bot voit la catégorie avec « Gérer les salons ». |
 | La transcription n'arrive pas | Vérifie `LOG_CHANNEL_ID` et que le bot peut voir, écrire et joindre des fichiers dans ce salon. Le ticket n'est pas supprimé tant que la transcription n'est pas envoyée. |
 | Les commandes n'apparaissent pas | `npm run register`, puis redémarre Discord (Ctrl+R). |
+| « Le bot n'a pas la permission « Joindre des fichiers » » | Mode `"fichier"` : donne cette permission au rôle du bot, ou dans le salon (Modifier le salon > Permissions > rôle du bot > Joindre des fichiers). Elle est dans le lien d'invitation (`npm run invite`). |
+| « binding ASSETS absent » | Ton `wrangler.toml` est l'ancien : copie celui du ZIP (section `[assets]` avec `binding = "ASSETS"`), puis `npx wrangler deploy`. |
+| « Image introuvable dans public/ » | Le fichier `banniere-…-haut.gif` n'est pas dans `nova-club-bot/public/` (ou pas déployé) : copie-le puis `npx wrangler deploy`. |
+| « pièce jointe NON signalée comme animée » | Le fichier de `public/` n'est pas un GIF animé : `npm run check-images -- --local`. |
 | On ne voit que l'adresse de l'image en bleu | Tu es en mode `"haut"` : Discord n'a pas créé l'aperçu du lien. Mets `"banner_position": "haut_encadre"` (défaut), redéploie et republie le panneau. |
 | Un trait coloré ou gris est visible à gauche de la bannière | En mode `"haut_encadre"`, la barre du 1er encadré imite le fond du thème sombre (`#2B2D31`). Ajuste `banner_embed_color` si tu utilises un autre thème. |
 | La bannière n'apparaît pas ou ne bouge pas | `npm run check-images`. Ouvre l'adresse dans le navigateur : elle doit afficher le GIF animé. Si tu as remplacé l'image, augmente `images_version` dans `config.json` (cache de Discord), redéploie et republie. Un GIF ne s'anime pas si Discord est réglé sur « Ne jamais lire les GIF » (Paramètres > Accessibilité). |
@@ -452,9 +467,9 @@ nova-club-bot/
 └── test/worker.test.js      ← npm test (Discord simulé)
 ```
 
-## Mise à jour : mode « haut_encadre »
+## Mise à jour : bannière en pièce jointe
 
-Pour un bot **déjà installé et déployé** avec la version précédente (mode `"haut"`, où l'on ne voit que l'adresse en bleu).
+Pour un bot **déjà installé et déployé** avec la version précédente (mode `"haut_encadre"`).
 
 ### 1. Fichiers à copier depuis le ZIP de la branche
 
@@ -462,20 +477,23 @@ Télécharge le ZIP, décompresse-le, puis copie **depuis `nova-club-bot/` du ZI
 
 | Copier (remplacer) | |
 |---|---|
-| `src/` (tout le dossier) | code du bot |
-| `scripts/` (tout le dossier) | `check-images.js` connaît le nouveau mode |
+| `src/` (tout le dossier) | code du bot (nouveau fichier `publish.js`) |
+| `scripts/` (tout le dossier) | |
 | `test/` (tout le dossier) | tests |
-| `config.json` | passe `banner_position` à `"haut_encadre"` et ajoute `banner_embed_color` ; recopie dedans tes valeurs déjà remplies (salon questions, prix, liens, outils) |
+| `wrangler.toml` | **nouveau** : ajoute `binding = "ASSETS"` dans `[assets]` (ton id KV `a693b127…` y est déjà) |
+| `config.json` | passe `banner_position` à `"fichier"` et ajoute les nouveaux messages ; recopie dedans tes valeurs déjà remplies (salon questions, prix, liens, outils) |
 | `README.md` | ce guide |
 
 | Garder (ne pas toucher) | |
 |---|---|
 | `.env` | tes secrets locaux (token, identifiants) |
-| `wrangler.toml`, `package.json`, `package-lock.json`, `.github/…` | rien n'a changé |
+| `package.json`, `package-lock.json`, `.github/…` | rien n'a changé |
 | `public/` | **ne copie pas ce dossier** : tes images y sont déjà (les 8 bannières `-haut` suffisent) |
 | `node_modules/`, `.wrangler/` | se gèrent tout seuls |
 
-Si tu préfères ne pas remplacer ton `config.json`, change seulement la ligne `"banner_position"` en `"haut_encadre"` et ajoute en dessous `"banner_embed_color": "#2B2D31",`.
+Copie bien le nouveau `config.json` : sans lui, les messages du mode fichier (erreurs de permission, relecture de la pièce jointe) seraient absents.
+
+> **`wrangler.toml` est obligatoire** : sans le *binding* `ASSETS`, le bot ne peut pas lire ses images et affiche « binding ASSETS absent ».
 
 ### 2. Relancer
 
@@ -489,17 +507,25 @@ npm run check-images
 ```
 
 - `npm test` doit afficher `fail 0`.
-- `npm run check-images -- --local` doit afficher « Position des bannières : « haut_encadre » » puis « Toutes les images sont prêtes ».
-- `npx wrangler deploy` publie le code et la configuration.
+- `npm run check-images -- --local` doit afficher « Position des bannières : « fichier » » puis « Toutes les images sont prêtes ».
+- `npx wrangler deploy` publie le code, la configuration et le binding `ASSETS`.
 - `npm run check-images` vérifie les adresses en ligne.
 
-Pas besoin de `npm run register` (les commandes n'ont pas changé), ni de `npm install`, ni de `npm run secrets`.
+Pas besoin de `npm run register` (les commandes n'ont pas changé), ni de `npm install`, ni de `npm run secrets`. La permission « Joindre des fichiers » était déjà dans le lien d'invitation : vérifie seulement qu'elle n'a pas été retirée au rôle du bot.
 
-### 3. Republier les panneaux
+### 3. Republier les panneaux et regarder le résultat
 
-Les anciens messages ne changent pas tout seuls. Relance `/panel-infos`, `/panel-reglement`, `/panel-tickets`, `/panel-formation`, `/panel-outils`, `/panel-faq` et `/panel-autopilot`, puis supprime les anciens messages.
-`/annonce` n'a rien à republier : la prochaine annonce utilise déjà le nouveau mode (le ping reste dans le texte du message, avant les encadrés).
+Relance `/panel-infos`, `/panel-reglement`, `/panel-tickets`, `/panel-formation`, `/panel-outils`, `/panel-faq` et `/panel-autopilot`, puis supprime les anciens messages.
+Le message de confirmation doit contenir `🎞️ banniere.gif : pièce jointe reconnue par Discord (image/gif, animée, …)`. **Regarde ensuite le salon** : la bannière doit être au-dessus de l'encadré.
+
+### Si la pièce jointe s'affiche sous l'encadré
+
+Discord décide seul de l'ordre d'affichage, et l'API ne permet pas de le vérifier depuis le bot. Si la bannière apparaît **sous** l'encadré, trois solutions de repli :
+
+1. **Repasser en `"haut_encadre"`** (une ligne dans `config.json`) : la bannière est dans un premier encadré, toujours au-dessus ; il reste une légère boîte autour de l'image.
+2. **Deux messages à la suite** : un premier message avec la seule pièce jointe, puis un second avec l'encadré. Aucune boîte autour de l'image et une bannière toujours au-dessus ; en contrepartie, ce sont deux messages (à supprimer ensemble). Ce mode n'est pas encore dans le bot : demande-le si le mode `"fichier"` ne convient pas.
+3. **Mise en page « composants » de Discord** : une galerie d'images (la bannière jointe) au-dessus d'un conteneur avec barre orange, dans le même message, sans boîte autour de l'image. Mais ce format ne permet plus ni encadré classique, ni texte de contenu : le ping de `/annonce` devrait passer dans le conteneur. Non inclus pour l'instant.
 
 ### Changer de mode
 
-Dans `config.json`, mets `"banner_position"` à `"haut_encadre"`, `"haut"` ou `"encadre"`, puis `npx wrangler deploy` et republie les panneaux.
+Dans `config.json`, mets `"banner_position"` à `"fichier"`, `"haut_encadre"`, `"haut"` ou `"encadre"`, puis `npx wrangler deploy` et republie les panneaux.
