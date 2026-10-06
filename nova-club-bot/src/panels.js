@@ -85,9 +85,20 @@ export function banner(section, field = "banner") {
   return { bannerEmbed: url ? { color: bannerBarColor(), image: { url } } : undefined };
 }
 
+// Dernière ligne invisible (caractères « ⠀ » U+2800, qui ne sont pas des espaces pour Discord) : elle force
+// l'encadré à s'afficher à la largeur maximale (520 px) même si le texte est court, pour que la bannière
+// (520 px de large) soit toujours centrée au-dessus. Longueur réglable : `largeur_invisible` dans config.json.
+// Une seule ligne : si le nombre est trop grand, elle passe à la ligne et ajoute une ligne vide.
+const INVISIBLE = "\u2800";
+const INVISIBLE_MAX = 200;
+export function widthPadding() {
+  const n = Math.min(Math.floor(Number(config.largeur_invisible)), INVISIBLE_MAX);
+  return n > 0 ? `\n${INVISIBLE.repeat(n)}` : "";
+}
+
 // Un encadré : titre, description (sections de texte), bannière en bas, barre de couleur.
 export function embed({ title, description, image }) {
-  const e = { title, description, color: COLOR };
+  const e = { title, description: `${description}${widthPadding()}`, color: COLOR };
   if (image) e.image = { url: imageUrl(image) };
   return e;
 }
