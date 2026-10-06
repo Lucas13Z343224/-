@@ -38,8 +38,27 @@ Petit script à lancer **une seule fois**. Il ajoute un rôle à tous les membre
 
 ## 4. Installer et configurer
 
-Il faut Python 3.8 ou plus récent (<https://www.python.org/downloads/>).
-Ouvrez un terminal **dans ce dossier** (`discord-role-bot`) :
+### Récupérer le dossier sur votre ordinateur
+
+Le dossier est sur GitHub, dans le dépôt `Lucas13Z343224/-`, branche `claude/great-cori-bbbuh3`.
+Téléchargez le ZIP : <https://github.com/Lucas13Z343224/-/archive/refs/heads/claude/great-cori-bbbuh3.zip>,
+faites clic droit → **Extraire tout…**, puis déplacez le sous-dossier `discord-role-bot` où vous voulez,
+par exemple dans `C:\Users\VOTRE_NOM\Documents\discord-role-bot`.
+
+### Installer Python (si besoin)
+
+Windows 10/11, dans PowerShell :
+
+```powershell
+winget install -e --id Python.Python.3.12
+```
+
+Fermez puis rouvrez PowerShell, et vérifiez avec `python --version`.
+Sans winget : téléchargez l'installateur sur <https://www.python.org/downloads/> et **cochez « Add python.exe to PATH »** au premier écran.
+
+### Installer les dépendances
+
+Dans l'Explorateur de fichiers, ouvrez le dossier `discord-role-bot`, cliquez dans la barre d'adresse, tapez `powershell` puis Entrée : un terminal s'ouvre **dans ce dossier**.
 
 ```bash
 # Créer un environnement isolé (une seule fois)
@@ -62,7 +81,17 @@ DISCORD_TOKEN=le_token_copié_à_l_étape_1
 GUILD_ID=identifiant_du_serveur
 ROLE_ID=identifiant_du_rôle
 DELAY_SECONDS=1
+DRY_RUN=true
+MAX_MEMBERS=5
 ```
+
+- `DRY_RUN=true` : **mode test**, aucun rôle n'est ajouté, le script affiche seulement ce qu'il ferait.
+- `MAX_MEMBERS=5` : ne traite que les 5 premiers membres qui n'ont pas encore le rôle (`0` = tous).
+
+Ces deux valeurs sont prudentes par défaut. Procédure conseillée :
+1. Lancez une première fois tel quel (test sur 5 membres, rien n'est modifié).
+2. Mettez `DRY_RUN=false` (toujours `MAX_MEMBERS=5`) : 5 vrais ajouts, vérifiez dans Discord.
+3. Mettez `MAX_MEMBERS=0` et relancez pour tous les autres.
 
 Le fichier `.env` est exclu de git (`.gitignore`) : ne le partagez jamais.
 

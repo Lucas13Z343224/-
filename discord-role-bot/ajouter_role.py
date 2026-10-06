@@ -23,6 +23,8 @@ def lire_config():
     guild_id = os.getenv("GUILD_ID", "").strip()
     role_id = os.getenv("ROLE_ID", "").strip()
     delai = os.getenv("DELAY_SECONDS", "1").strip() or "1"
+    dry_run = os.getenv("DRY_RUN", "false").strip().lower() in ("1", "true", "oui", "yes", "vrai")
+    max_membres = os.getenv("MAX_MEMBERS", "0").strip() or "0"
 
     manquants = [nom for nom, val in
                  (("DISCORD_TOKEN", token), ("GUILD_ID", guild_id), ("ROLE_ID", role_id))
@@ -30,9 +32,10 @@ def lire_config():
     if manquants:
         sys.exit(f"Valeur(s) manquante(s) dans le fichier .env : {', '.join(manquants)}")
     try:
-        return token, int(guild_id), int(role_id), float(delai)
+        return token, int(guild_id), int(role_id), float(delai), dry_run, max(0, int(max_membres))
     except ValueError:
-        sys.exit("GUILD_ID et ROLE_ID doivent être des nombres, DELAY_SECONDS un nombre de secondes.")
+        sys.exit("GUILD_ID, ROLE_ID et MAX_MEMBERS doivent être des nombres entiers, "
+                 "DELAY_SECONDS un nombre de secondes.")
 
 
 def noter_erreur(message):
@@ -43,7 +46,7 @@ def noter_erreur(message):
         f.write(ligne + "\n")
 
 
-TOKEN, GUILD_ID, ROLE_ID, DELAI = lire_config()
+TOKEN, GUILD_ID, ROLE_ID, DELAI, DRY_RUN, MAX_MEMBERS = lire_config()
 
 intents = discord.Intents.default()
 intents.members = True  # nécessite "Server Members Intent" sur le portail développeur
@@ -81,18 +84,27 @@ async def ajouter_role_a_tous():
     humains = [m for m in guild.members if not m.bot]
     a_faire = [m for m in humains if role not in m.roles]
     deja = len(humains) - len(a_faire)
-    total = len(a_faire)
 
-    print(f"{len(humains)} membres humains, {deja} ont déjà le rôle, {total} à traiter.")
+    print(f"{len(humains)} membres humains, {deja} ont déjà le rôle, {len(a_faire)} sans le rôle.")
+    if MAX_MEMBERS and len(a_faire) > MAX_MEMBERS:
+        a_faire = a_faire[:MAX_MEMBERS]
+        print(f"MAX_MEMBERS={MAX_MEMBERS} : seuls les {MAX_MEMBERS} premiers seront traités.")
+    total = len(a_faire)
     if total == 0:
         print("Rien à faire. Terminé !")
         return
-    minutes = total * DELAI / 60
-    print(f"Durée estimée : environ {minutes:.0f} minute(s). Ctrl+C pour arrêter (relançable ensuite).\n")
+    if DRY_RUN:
+        print("MODE TEST (DRY_RUN=true) : aucun rôle ne sera ajouté, affichage seulement.\n")
+    else:
+        minutes = total * DELAI / 60
+        print(f"Durée estimée : environ {minutes:.0f} minute(s). Ctrl+C pour arrêter (relançable ensuite).\n")
 
     ajoutes = erreurs = 0
     for i, membre in enumerate(a_faire, start=1):
         prefixe = f"[{i} / {total}] {membre} ({membre.id})"
+        if DRY_RUN:
+            print(f"{prefixe} : recevrait le rôle (test, rien n'est modifié)", flush=True)
+            continue
         try:
             await membre.add_roles(role, reason="Ajout du rôle à tous les membres (script unique)")
             ajoutes += 1
@@ -113,6 +125,10 @@ async def ajouter_role_a_tous():
         if i < total:
             await asyncio.sleep(DELAI)
 
+    if DRY_RUN:
+        print(f"\nTest terminé : {total} membre(s) recevraient le rôle. "
+              "Mettez DRY_RUN=false dans .env pour le faire vraiment.")
+        return
     print(f"\nTerminé : {ajoutes} rôle(s) ajouté(s), {erreurs} erreur(s), {deja} déjà en place.")
     if erreurs:
         print(f"Détail des erreurs dans {FICHIER_ERREURS}. Relancez le script pour réessayer.")
