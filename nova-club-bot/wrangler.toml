@@ -1,0 +1,16 @@
+# Configuration Cloudflare du bot NOVA CLUB.
+# Aucun secret ici : le token et les identifiants sont dans les secrets Cloudflare.
+name = "nova-club-bot"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+# Stockage des tickets ouverts (Cloudflare KV, gratuit).
+# Remplace l'id par celui affiché par : npx wrangler kv namespace create TICKETS
+[[kv_namespaces]]
+binding = "TICKETS"
+id = "REMPLACE_PAR_ID_DU_KV"
+
+# Journaux visibles dans le tableau de bord Cloudflare (Workers > nova-club-bot > Logs)
+[observability]
+enabled = true

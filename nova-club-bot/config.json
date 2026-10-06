@@ -1,0 +1,117 @@
+{
+  "_aide": "Tous les textes du bot sont ici. Modifie seulement ce qui est entre guillemets à droite des deux-points, puis redéploie. Variables possibles dans certains textes : {user}, {category}, {channel}, {staff}, {role}.",
+
+  "server_name": "NOVA CLUB | E-commerce",
+  "color": "#7C3AED",
+  "timezone": "Europe/Paris",
+  "footer": "NOVA CLUB | E-commerce",
+
+  "commands": {
+    "panel_infos": "Publier le panneau d'informations du serveur",
+    "panel_reglement": "Publier le règlement avec le bouton d'acceptation",
+    "panel_tickets": "Publier le panneau d'ouverture des tickets",
+    "option_salon": "Salon où publier le panneau (par défaut : le salon actuel)"
+  },
+
+  "infos": {
+    "title": "📌 Informations",
+    "banner_url": "",
+    "welcome": "Bienvenue sur **NOVA CLUB | E-commerce** ! Ici, on apprend, on partage et on avance ensemble sur nos projets de boutique en ligne. Voici les salons à connaître pour bien démarrer :",
+    "channels_title": "🧭 Les salons utiles",
+    "channels": [
+      { "id": "REMPLACE_PAR_ID_SALON", "emoji": "📜", "description": "Le règlement à lire et accepter pour accéder au serveur." },
+      { "id": "REMPLACE_PAR_ID_SALON", "emoji": "📣", "description": "Les annonces importantes de l'équipe." },
+      { "id": "REMPLACE_PAR_ID_SALON", "emoji": "💬", "description": "La discussion générale entre membres." },
+      { "id": "REMPLACE_PAR_ID_SALON", "emoji": "🎫", "description": "Ouvre un ticket si tu as besoin d'aide." }
+    ],
+    "published": "✅ Le panneau d'informations a été publié dans {channel}."
+  },
+
+  "reglement": {
+    "title": "📜 Règlement du serveur",
+    "intro": "Pour que NOVA CLUB reste un espace utile et agréable, merci de respecter ces règles :",
+    "rules": [
+      "Reste respectueux et bienveillant avec tous les membres.",
+      "Pas de spam, de publicité ni de message privé non sollicité.",
+      "Publie chaque message dans le salon adapté.",
+      "Ne partage pas les contenus de la formation en dehors du serveur.",
+      "Aucune arnaque, aucun lien douteux, aucune promesse de gains irréalistes.",
+      "Les décisions de l'équipe de modération doivent être respectées."
+    ],
+    "outro": "En cliquant sur le bouton ci-dessous, tu confirmes avoir lu et accepté ce règlement.",
+    "button_label": "J'ai lu et j'accepte",
+    "button_emoji": "✅",
+    "success": "✅ Merci ! Le rôle {role} t'a été attribué. Bienvenue dans le club !",
+    "already": "ℹ️ Tu as déjà accepté le règlement, tu as déjà le rôle {role}.",
+    "published": "✅ Le règlement a été publié dans {channel}."
+  },
+
+  "tickets": {
+    "panel_title": "🎫 Besoin d'aide ?",
+    "panel_description": "1️⃣ Choisis la catégorie de ta demande dans le menu.\n2️⃣ Clique sur **Ouvrir un ticket**.\n\nUn salon privé sera créé, visible uniquement par toi et l'équipe.",
+    "select_placeholder": "Choisis une catégorie…",
+    "categories": [
+      { "value": "support", "label": "Support", "emoji": "🛠️", "description": "Aide générale sur le serveur" },
+      { "value": "acces", "label": "Problème d'accès", "emoji": "🔑", "description": "Rôle, salon ou contenu inaccessible" },
+      { "value": "formation", "label": "Question sur la formation", "emoji": "🎓", "description": "Une question sur un module ou une leçon" },
+      { "value": "autre", "label": "Autre", "emoji": "💡", "description": "Toute autre demande" }
+    ],
+    "open_button_label": "Ouvrir un ticket",
+    "open_button_emoji": "📩",
+    "channel_prefix": "ticket-",
+    "category_selected": "👍 Catégorie choisie : **{category}**. Clique maintenant sur « Ouvrir un ticket ».",
+    "choose_category_first": "⚠️ Choisis d'abord une catégorie dans le menu, puis clique de nouveau sur « Ouvrir un ticket ».",
+    "already_open": "⚠️ Tu as déjà une demande ouverte : {channel}. Ferme-la avant d'en ouvrir une nouvelle.",
+    "created": "✅ Ton ticket est prêt : {channel}",
+    "welcome_title": "🎫 Nouveau ticket — {category}",
+    "welcome_description": "Bonjour {user} ! Merci d'avoir contacté l'équipe de NOVA CLUB.\n\nExplique ta demande en détail (captures d'écran bienvenues). Un membre de l'équipe {staff} va te répondre au plus vite.",
+    "close_button_label": "Fermer le ticket",
+    "close_button_emoji": "🔒",
+    "claim_button_label": "Je m'en occupe",
+    "claim_button_emoji": "🙋",
+    "claimed_button_label": "Pris en charge",
+    "claimed_field": "Pris en charge par",
+    "claimed_message": "🙋 {user} prend en charge ce ticket.",
+    "claim_staff_only": "⛔ Seule l'équipe peut prendre en charge un ticket.",
+    "close_confirm": "❓ Veux-tu vraiment fermer ce ticket ? La conversation sera archivée puis le salon sera supprimé.",
+    "close_confirm_yes": "Oui, fermer",
+    "close_confirm_no": "Annuler",
+    "close_cancelled": "👌 Fermeture annulée.",
+    "closing": "⏳ Fermeture en cours : archivage de la conversation…",
+    "published": "✅ Le panneau des tickets a été publié dans {channel}.",
+    "log_title": "🗂️ Ticket fermé",
+    "transcript_header": "Transcription du ticket",
+    "label_owner": "Ouvert par",
+    "label_category": "Catégorie",
+    "label_opened": "Ouvert le",
+    "label_closed_by": "Fermé par",
+    "label_closed": "Fermé le",
+    "label_claimed": "Pris en charge par",
+    "label_messages": "Messages archivés",
+    "label_nobody": "Personne",
+    "label_unknown": "Inconnu",
+    "label_attachment": "Pièce jointe",
+    "label_embed": "Encadré"
+  },
+
+  "errors": {
+    "admin_only": "⛔ Cette commande est réservée aux administrateurs.",
+    "guild_only": "⛔ Cette action ne fonctionne que sur le serveur, pas en message privé.",
+    "not_a_ticket": "⛔ Ce salon n'est pas un ticket géré par le bot.",
+    "missing_config": "⚙️ Configuration incomplète : il manque le secret Cloudflare {name}. Ajoute-le puis réessaie.",
+    "invalid_channel_ids": "⚙️ Dans config.json, remplace les identifiants de salon invalides de la section « infos » : {ids}",
+    "unknown_category": "⚠️ Catégorie inconnue. Choisis-en une dans le menu.",
+    "missing_permissions": "⛔ Le bot n'a pas les permissions nécessaires. Vérifie ses permissions dans ce salon et place son rôle au-dessus des rôles qu'il doit donner (Paramètres du serveur > Rôles).",
+    "missing_access": "⛔ Le bot ne peut pas voir ce salon ou cette catégorie. Donne-lui l'accès « Voir le salon ».",
+    "unknown_channel": "⚠️ Salon ou catégorie introuvable. Vérifie TICKET_CATEGORY_ID et LOG_CHANNEL_ID dans les secrets.",
+    "unknown_role": "⚠️ Rôle introuvable. Vérifie MEMBER_ROLE_ID et STAFF_ROLE_ID dans les secrets.",
+    "too_many_channels": "⚠️ Le serveur ou la catégorie des tickets a atteint le nombre maximum de salons. Ferme d'anciens tickets.",
+    "invalid_form": "⚠️ Discord a refusé la demande (données invalides). Vérifie les identifiants dans les secrets et la bannière dans config.json.",
+    "bad_token": "🔑 Le token du bot est invalide. Mets à jour le secret DISCORD_TOKEN.",
+    "rate_limited": "🐢 Discord limite temporairement le bot. Réessaie dans quelques secondes.",
+    "storage": "💾 Erreur du stockage Cloudflare KV. Réessaie dans quelques secondes.",
+    "log_failed": "⚠️ Impossible d'envoyer la transcription dans le salon de logs : le ticket n'a PAS été supprimé. Vérifie LOG_CHANNEL_ID et les permissions du bot (envoyer des messages, joindre des fichiers).",
+    "generic": "❌ Une erreur inattendue est survenue. Réessaie ; si le problème continue, préviens un administrateur.",
+    "unknown_action": "❓ Action inconnue ou plus prise en charge."
+  }
+}
