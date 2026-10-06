@@ -15,6 +15,7 @@ import discord
 from dotenv import load_dotenv
 
 FICHIER_ERREURS = "erreurs.log"
+DELAI_MAX_RECUPERATION = 120  # secondes avant d'abandonner la récupération des membres
 
 
 def lire_config():
@@ -50,7 +51,8 @@ TOKEN, GUILD_ID, ROLE_ID, DELAI, DRY_RUN, MAX_MEMBERS = lire_config()
 
 intents = discord.Intents.default()
 intents.members = True  # nécessite "Server Members Intent" sur le portail développeur
-client = discord.Client(intents=intents)
+# Les membres sont récupérés plus bas avec fetch_members : inutile de les charger au démarrage.
+client = discord.Client(intents=intents, chunk_guilds_at_startup=False)
 deja_lance = False  # on_ready peut se déclencher à nouveau après une reconnexion
 
 
@@ -79,9 +81,31 @@ async def ajouter_role_a_tous():
 
     print(f"Serveur : {guild.name}  |  Rôle : {role.name}")
     print("Récupération de la liste des membres…", flush=True)
-    await guild.chunk()
+    membres = []
 
-    humains = [m for m in guild.members if not m.bot]
+    async def recuperer_membres():
+        async for membre in guild.fetch_members(limit=None):
+            membres.append(membre)
+            if len(membres) % 500 == 0:
+                print(f"  {len(membres)} membres récupérés…", flush=True)
+
+    try:
+        await asyncio.wait_for(recuperer_membres(), timeout=DELAI_MAX_RECUPERATION)
+    except asyncio.TimeoutError:
+        noter_erreur(f"La récupération des membres a dépassé {DELAI_MAX_RECUPERATION} secondes "
+                     f"({len(membres)} récupérés). Vérifiez votre connexion internet et que "
+                     "« Server Members Intent » est bien activé et enregistré, puis relancez.")
+        return
+    except discord.ClientException as e:
+        noter_erreur(f"Impossible de récupérer les membres : {e}. "
+                     "Activez « Server Members Intent » dans le portail développeur (onglet Bot).")
+        return
+    except discord.HTTPException as e:
+        noter_erreur(f"Erreur Discord pendant la récupération des membres : {e.status} - {e.text}")
+        return
+    print(f"  {len(membres)} membres récupérés au total.", flush=True)
+
+    humains = [m for m in membres if not m.bot]
     a_faire = [m for m in humains if role not in m.roles]
     deja = len(humains) - len(a_faire)
 
