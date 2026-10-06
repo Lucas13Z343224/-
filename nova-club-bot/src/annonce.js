@@ -75,13 +75,17 @@ export function annonceFromSubmit(interaction) {
   const imageValue = annonceImages().some((i) => i.value === image) ? image : config.annonce.default_image;
   const body = annoncePanel({ title, text, imageValue });
 
+  // Le ping est dans le contenu, sur sa propre ligne, AVANT l'adresse de la bannière du haut (si elle existe).
+  let pingLine = null;
   if (ping === "everyone") {
-    body.content = "@everyone";
+    pingLine = "@everyone";
     body.allowed_mentions = { parse: ["everyone"] };
   } else if (ping === "role") {
-    body.content = `<@&${role}>`;
+    pingLine = `<@&${role}>`;
     body.allowed_mentions = { roles: [role] };
   }
+  const content = [pingLine, body.content].filter(Boolean).join("\n");
+  if (content) body.content = content;
   return { channelId: channel === NONE ? interaction.channel_id : channel, body, ping };
 }
 

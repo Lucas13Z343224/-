@@ -18,7 +18,7 @@ import {
   userOf,
 } from "./discord.js";
 import { annonceFromSubmit, annonceModal, annonceSummary, isAnnonceModal } from "./annonce.js";
-import { PANELS, mediaReport, ticketSelectRow } from "./panels.js";
+import { PANELS, bannerUrlOf, mediaReport, ticketSelectRow, unfurlReport } from "./panels.js";
 import { askCloseConfirmation, cancelClose, claimTicket, closeTicket, openTicket } from "./tickets.js";
 import { verifyDiscordRequest } from "./verify.js";
 
@@ -77,17 +77,33 @@ function runWithFollowUp(ctx, interaction, task) {
   );
 }
 
-// Résumé de la vérification des images faite par Discord après publication.
-function mediaLines(sentMessage) {
+// Texte d'une image lue (ou pas encore lue) par Discord.
+function mediaLine(item) {
   const m = config.media;
-  return mediaReport(sentMessage).map((item) => {
-    const file = decodeURIComponent(item.url.split("/").pop().split("?")[0]);
-    if (item.animated) return fill(m.animated, { file });
-    if (item.contentType === "image/gif") return fill(m.gif_unconfirmed, { file });
-    if (item.contentType?.startsWith("image/")) return fill(m.image_ok, { file });
-    if (item.contentType) return fill(m.not_image, { file, type: item.contentType });
-    return fill(m.pending, { file });
-  });
+  const file = decodeURIComponent(item.url.split("/").pop().split("?")[0]);
+  if (item.animated) return fill(m.animated, { file });
+  if (item.contentType === "image/gif") return fill(m.gif_unconfirmed, { file });
+  if (item.contentType?.startsWith("image/")) return fill(m.image_ok, { file });
+  if (item.contentType) return fill(m.not_image, { file, type: item.contentType });
+  return fill(m.pending, { file });
+}
+
+// Résumé de ce que Discord a lu après publication : images d'encadré (réponse immédiate) et
+// bannière du haut (Discord crée son aperçu après coup : on attend un peu puis on relit le message).
+async function mediaLines(env, channelId, body, sent) {
+  const lines = mediaReport(sent).map(mediaLine);
+  const bannerUrl = bannerUrlOf(body.content);
+  if (bannerUrl && sent?.id) {
+    await sleep(Number(env.UNFURL_WAIT_MS ?? 3000));
+    let report = null;
+    try {
+      report = unfurlReport(await discord(env, "GET", `/channels/${channelId}/messages/${sent.id}`), bannerUrl);
+    } catch (err) {
+      console.error("relecture du message", err);
+    }
+    lines.unshift(report ? mediaLine(report) : fill(config.media.unfurl_pending, { file: decodeURIComponent(bannerUrl.split("/").pop().split("?")[0]) }));
+  }
+  return lines;
 }
 
 async function handleCommand(interaction, env, ctx) {
@@ -106,8 +122,9 @@ async function handleCommand(interaction, env, ctx) {
 
   const channelId = interaction.data.options?.find((o) => o.name === "salon")?.value ?? interaction.channel_id;
   runDeferred(ctx, interaction, async (ready) => {
-    const sent = await discord(env, "POST", `/channels/${channelId}/messages`, { body: panel.build() });
-    const lines = [fill(panel.published(), { channel: `<#${channelId}>` }), ...mediaLines(sent)];
+    const body = panel.build();
+    const sent = await discord(env, "POST", `/channels/${channelId}/messages`, { body });
+    const lines = [fill(panel.published(), { channel: `<#${channelId}>` }), ...(await mediaLines(env, channelId, body, sent))];
     await ready;
     await editOriginal(interaction, { content: lines.join("\n") });
   });
@@ -121,8 +138,9 @@ function handleModalSubmit(interaction, env, ctx) {
   runDeferred(ctx, interaction, async (ready) => {
     const { channelId, body, ping } = annonceFromSubmit(interaction);
     const sent = await discord(env, "POST", `/channels/${channelId}/messages`, { body });
+    const media = await mediaLines(env, channelId, body, sent);
     await ready;
-    await editOriginal(interaction, { content: [...annonceSummary(channelId, ping), ...mediaLines(sent)].join("\n") });
+    await editOriginal(interaction, { content: [...annonceSummary(channelId, ping), ...media].join("\n") });
   });
   return deferredEphemeral();
 }

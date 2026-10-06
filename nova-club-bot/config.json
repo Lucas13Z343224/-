@@ -2,6 +2,8 @@
   "_aide": "Tous les textes du bot sont ici. Modifie seulement ce qui est entre guillemets à droite des deux-points, puis redéploie (npx wrangler deploy). Les valeurs marquées « À REMPLACER » sont des exemples. Dans les textes : **gras**, *italique*, - listes, \\n = retour à la ligne. Variables possibles : {user}, {category}, {channel}, {staff}, {role}, {prix}, {lien}, {salon_questions}, {categories}.",
   "server_name": "NOVA CLUB | E-commerce",
   "color": "#FF6B1A",
+  "banner_position": "haut",
+  "_banner_position_aide": "Où s'affiche la bannière : \"haut\" = grande image TOUT EN HAUT du message, au-dessus de l'encadré (adresse « -haut » mise dans le contenu du message) ; \"encadre\" = ancienne bannière dans l'encadré, en bas. Pour revenir en arrière : mets \"encadre\", redéploie et republie les panneaux.",
   "timezone": "Europe/Paris",
   "footer": "NOVA CLUB | E-commerce",
   "commands": {
@@ -22,6 +24,7 @@
   "infos": {
     "title": "📌 Informations",
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-informations.gif",
+    "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-informations-haut.gif",
     "welcome": "Bienvenue sur **NOVA CLUB | E-commerce** ! Ici, on apprend, on partage et on avance ensemble sur nos projets de boutique en ligne.",
     "channels_title": "🧭 Les salons utiles",
     "channels": [
@@ -35,6 +38,7 @@
   },
   "reglement": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-reglement.gif",
+    "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-reglement-haut.gif",
     "title": "📜 Règlement du serveur",
     "intro": "Pour que NOVA CLUB reste un espace utile et agréable, merci de respecter ces règles.",
     "rules": [
@@ -56,6 +60,7 @@
   },
   "tickets": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-tickets.gif",
+    "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-tickets-haut.gif",
     "questions_channel_id": "REMPLACE_PAR_ID_SALON_QUESTIONS",
     "panel_title": "🎫 Support — Nova Club",
     "panel_description": "Besoin de contacter l'équipe ? Choisis la raison de ta demande dans le menu ci-dessous : un ticket privé sera créé automatiquement.\n\n**📂 Les catégories**\n{categories}\n\n**⚠️ Avant d'ouvrir un ticket**\nPour les questions sur ta boutique, utilise plutôt le salon {salon_questions}.",
@@ -123,6 +128,7 @@
   },
   "formation": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-formation.gif",
+    "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-formation-haut.gif",
     "image_url": "https://nova-club-bot.novaclub.workers.dev/decouverte-formation.png",
     "title": "🎓 Formation dropshipping eBay & Etsy",
     "description": "Une formation pour apprendre, étape par étape, à vendre sur **eBay** et **Etsy**.",
@@ -142,6 +148,7 @@
   },
   "outils": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-outils.gif",
+    "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-outils-haut.gif",
     "title": "🛠️ Outils pour ton business",
     "intro": "Une sélection d'outils utiles pour lancer et gérer ta boutique en ligne.",
     "tools": [
@@ -166,6 +173,7 @@
   },
   "faq": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-faq.gif",
+    "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-faq-haut.gif",
     "title": "❓ FAQ",
     "questions": [
       {
@@ -190,6 +198,7 @@
   },
   "autopilot": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-autopilot.gif",
+    "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-autopilot-haut.gif",
     "title": "🤖 Nova Autopilot",
     "description": "**Nova Autopilot** t'aide à organiser le quotidien de ta boutique en ligne, à partir d'un seul outil.",
     "features": [
@@ -212,7 +221,8 @@
     "image_ok": "🖼️ {file} : image reconnue par Discord.",
     "not_image": "⚠️ {file} : Discord ne reçoit pas une image ({type}). Vérifie que le fichier est bien dans public/ et redéploie.",
     "pending": "⏳ {file} : Discord n'a pas encore analysé l'image. Vérifie l'affichage dans le salon ; si elle n'apparaît pas, lance npm run check-images.",
-    "gif_unconfirmed": "🖼️ {file} : GIF reconnu par Discord, mais pas signalé comme animé. Vérifie à l'écran ; sinon remplace le fichier par un vrai GIF animé (npm run check-images)."
+    "gif_unconfirmed": "🖼️ {file} : GIF reconnu par Discord, mais pas signalé comme animé. Vérifie à l'écran ; sinon remplace le fichier par un vrai GIF animé (npm run check-images).",
+    "unfurl_pending": "⏳ {file} : Discord n'a pas encore affiché la bannière du haut. Regarde le salon ; si elle manque, ouvre son adresse dans le navigateur (npm run check-images) et vérifie que « Afficher l'aperçu des liens » est activé dans tes réglages Discord (Paramètres > Texte et images)."
   },
   "images_version": "2",
   "_images_version_aide": "Ajouté à la fin des adresses d'images (?v=2) pour que Discord recharge une image remplacée. Quand tu remplaces une image par une nouvelle version, augmente ce nombre (3, 4…) et redéploie, puis republie les panneaux.",
@@ -226,27 +236,32 @@
       {
         "value": "annonce",
         "label": "Annonce",
-        "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-annonce.gif"
+        "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-annonce.gif",
+        "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-annonce-haut.gif"
       },
       {
         "value": "formation",
         "label": "Formation",
-        "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-formation.gif"
+        "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-formation.gif",
+        "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-formation-haut.gif"
       },
       {
         "value": "outils",
         "label": "Outils",
-        "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-outils.gif"
+        "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-outils.gif",
+        "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-outils-haut.gif"
       },
       {
         "value": "infos",
         "label": "Informations",
-        "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-informations.gif"
+        "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-informations.gif",
+        "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-informations-haut.gif"
       },
       {
         "value": "aucune",
         "label": "Aucune image",
-        "banner_url": ""
+        "banner_url": "",
+        "banner_haut_url": ""
       }
     ],
     "ping_none": "Aucun",
@@ -278,6 +293,7 @@
     "too_many_items": "⚙️ Trop d'éléments dans config.json pour ce panneau (« {field} », maximum {max}).",
     "annonce_role_missing": "⚠️ Tu as choisi de mentionner un rôle : renseigne l'option « role » de la commande.",
     "annonce_empty": "⚠️ Le titre et le texte de l'annonce ne peuvent pas être vides.",
-    "embed_too_long": "⚙️ Le texte du panneau est trop long pour Discord (limite : {max} caractères, actuellement {size}). Raccourcis-le dans config.json."
+    "embed_too_long": "⚙️ Le texte du panneau est trop long pour Discord (limite : {max} caractères, actuellement {size}). Raccourcis-le dans config.json.",
+    "invalid_banner_position": "⚙️ Dans config.json, « banner_position » doit valoir \"haut\" ou \"encadre\" (valeur actuelle : {value})."
   }
 }

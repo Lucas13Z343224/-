@@ -18,9 +18,9 @@ const linkButton = (label, url, e) => ({ type: 2, style: 5, label, url, emoji: e
 
 // Ajoute ?v=<images_version> aux adresses d'images : Discord garde les images en cache
 // d'après leur adresse, ce numéro force le rechargement d'une image remplacée.
-export function imageUrl(url) {
+export function imageUrl(url, field = "banner_url") {
   if (!url) return "";
-  checkUrl(url, "banner_url");
+  checkUrl(url, field);
   const version = String(config.images_version ?? "").trim();
   if (!version || url.includes("?")) return url;
   return `${url}?v=${encodeURIComponent(version)}`;
@@ -48,6 +48,26 @@ function checkMax(list, field, max) {
   if (list.length > max) throw new UserError(fill(config.errors.too_many_items, { field, max }));
 }
 
+// Position de la bannière (réglage `banner_position` de config.json) :
+//   "haut"    → l'adresse de la bannière « -haut » est le CONTENU du message : Discord l'affiche en grande
+//               image tout en haut, au-dessus de l'encadré, dans le même message ;
+//   "encadre" → l'ancienne bannière est dans l'encadré, en bas (embed.image).
+export function bannerPosition() {
+  const raw = String(config.banner_position ?? "haut").trim().toLowerCase();
+  if (raw !== "haut" && raw !== "encadre") {
+    throw new UserError(fill(config.errors.invalid_banner_position, { value: config.banner_position }));
+  }
+  return raw;
+}
+
+// Renvoie { content, image } à utiliser pour la section de config donnée ({ banner_url, banner_haut_url }).
+export function banner(section, field = "banner") {
+  if (bannerPosition() === "haut") {
+    return { content: section.banner_haut_url ? imageUrl(section.banner_haut_url, `${field}_haut_url`) : undefined, image: undefined };
+  }
+  return { content: undefined, image: section.banner_url || undefined };
+}
+
 // Un encadré : titre, description (sections de texte), bannière en bas, barre de couleur.
 export function embed({ title, description, image }) {
   const e = { title, description, color: COLOR };
@@ -60,7 +80,7 @@ const section = (heading, body) => (heading ? `**${heading}**\n${body}` : body);
 const join = (...parts) => parts.filter(Boolean).join("\n\n");
 
 // Vérifie les limites de Discord avant l'envoi, avec un message clair.
-function message(embeds, components) {
+function message(embeds, components, content) {
   for (const e of embeds) {
     if ((e.title ?? "").length > EMBED_TITLE_MAX) {
       throw new UserError(fill(config.errors.embed_too_long, { max: EMBED_TITLE_MAX, size: e.title.length }));
@@ -72,6 +92,7 @@ function message(embeds, components) {
   const total = embeds.reduce((n, e) => n + (e.title ?? "").length + (e.description ?? "").length, 0);
   if (total > EMBED_TOTAL_MAX) throw new UserError(fill(config.errors.embed_too_long, { max: EMBED_TOTAL_MAX, size: total }));
   const msg = { embeds, allowed_mentions: { parse: [] } };
+  if (content) msg.content = content;
   if (components?.length) msg.components = components;
   return msg;
 }
@@ -81,23 +102,28 @@ export function infosPanel() {
   const c = config.infos;
   checkChannelIds(c.channels.map((ch) => ch.id));
   const list = c.channels.map((ch) => `${ch.emoji ?? "•"} <#${ch.id}> — ${ch.description}`).join("\n");
-  return message([
-    embed({ title: c.title, description: join(c.welcome, section(c.channels_title, list)), image: c.banner_url }),
-  ]);
+  const b = banner(c, "infos.banner");
+  return message(
+    [embed({ title: c.title, description: join(c.welcome, section(c.channels_title, list)), image: b.image })],
+    undefined,
+    b.content,
+  );
 }
 
 export function reglementPanel() {
   const r = config.reglement;
   const rules = r.rules.map((rule, i) => `**${i + 1}.** ${rule}`).join("\n");
+  const b = banner(r, "reglement.banner");
   return message(
     [
       embed({
         title: r.title,
         description: join(r.intro, section(r.rules_title, rules), section(r.outro_title, r.outro)),
-        image: r.banner_url,
+        image: b.image,
       }),
     ],
     [row({ type: 2, style: 3, custom_id: "rules:accept", label: r.button_label, emoji: emoji(r.button_emoji) })],
+    b.content,
   );
 }
 
@@ -125,15 +151,17 @@ export function ticketsPanel() {
   const categories = t.categories
     .map((cat) => `${cat.emoji ?? "•"} **${cat.label}**${cat.description ? ` — ${cat.description}` : ""}`)
     .join("\n");
+  const b = banner(t, "tickets.banner");
   return message(
     [
       embed({
         title: t.panel_title,
         description: fill(t.panel_description, { categories, salon_questions: `<#${t.questions_channel_id}>` }),
-        image: t.banner_url,
+        image: b.image,
       }),
     ],
     [ticketSelectRow()],
+    b.content,
   );
 }
 
@@ -142,16 +170,17 @@ export function formationPanel() {
   const lien = checkUrl(f.lien, "formation.lien");
   const vars = { prix: f.prix, lien };
   const points = f.points.map((p) => `• ${p}`).join("\n");
+  const b = banner(f, "formation.banner");
   const embeds = [
     embed({
       title: f.title,
       description: join(fill(f.description, vars), section(f.points_title, points), section(f.details_title, fill(f.details, vars))),
-      image: f.banner_url,
+      image: b.image,
     }),
   ];
   // Deuxième encadré : l'image de présentation en grande image.
   if (f.image_url) embeds.push({ color: COLOR, image: { url: imageUrl(f.image_url) } });
-  return message(embeds, [row(linkButton(f.button_label, lien, f.button_emoji))]);
+  return message(embeds, [row(linkButton(f.button_label, lien, f.button_emoji))], b.content);
 }
 
 export function outilsPanel() {
@@ -160,29 +189,33 @@ export function outilsPanel() {
   const tools = o.tools
     .map((tool, i) => `🔹 **${tool.name}**\n${tool.description}\n[${o.link_label} →](${checkUrl(tool.url, `outils.tools[${i}].url`)})`)
     .join("\n\n");
-  return message([embed({ title: o.title, description: join(o.intro, tools), image: o.banner_url })]);
+  const b = banner(o, "outils.banner");
+  return message([embed({ title: o.title, description: join(o.intro, tools), image: b.image })], undefined, b.content);
 }
 
 export function faqPanel() {
   const q = config.faq;
   checkMax(q.questions, "faq.questions", 15);
   const body = q.questions.map((item) => section(`${q.question_emoji} ${item.question}`, item.answer)).join("\n\n");
-  return message([embed({ title: q.title, description: body, image: q.banner_url })]);
+  const b = banner(q, "faq.banner");
+  return message([embed({ title: q.title, description: body, image: b.image })], undefined, b.content);
 }
 
 export function autopilotPanel() {
   const a = config.autopilot;
   const lien = checkUrl(a.lien_autopilot, "autopilot.lien_autopilot");
   const features = a.features.map((f) => `• ${f}`).join("\n");
+  const b = banner(a, "autopilot.banner");
   return message(
     [
       embed({
         title: a.title,
         description: join(a.description, section(a.features_title, features), `*${a.disclaimer}*`),
-        image: a.banner_url,
+        image: b.image,
       }),
     ],
     [row(linkButton(a.button_label, lien, a.button_emoji))],
+    b.content,
   );
 }
 
@@ -193,7 +226,8 @@ export function annonceImages() {
 
 export function annoncePanel({ title, text, imageValue }) {
   const choice = annonceImages().find((i) => i.value === imageValue) ?? annonceImages().find((i) => i.value === config.annonce.default_image);
-  return message([embed({ title, description: text, image: choice?.banner_url })]);
+  const b = banner(choice ?? {}, "annonce.images.banner");
+  return message([embed({ title, description: text, image: b.image })], undefined, b.content);
 }
 
 export const PANELS = {
@@ -206,14 +240,28 @@ export const PANELS = {
   "panel-autopilot": { build: autopilotPanel, published: () => config.autopilot.published },
 };
 
-// Vérifie, dans la réponse de Discord, comment les images des encadrés ont été lues.
+// Dernière ligne du contenu si c'est une adresse https seule sur sa ligne (= la bannière du haut).
+export function bannerUrlOf(content) {
+  const last = String(content ?? "").split("\n").pop().trim();
+  return /^https:\/\/\S+$/.test(last) ? last : null;
+}
+
+const toReport = (url, media) => ({
+  url,
+  contentType: media?.content_type ?? null,
+  known: media?.width != null || media?.content_type != null,
+  animated: Boolean((media?.flags ?? 0) & IS_ANIMATED_EMBED),
+});
+
+// Images d'encadré (position « encadre » et image de la formation), telles que Discord les a lues.
 export function mediaReport(sentMessage) {
-  return (sentMessage?.embeds ?? [])
-    .filter((e) => e.image)
-    .map((e) => ({
-      url: e.image.url,
-      contentType: e.image.content_type ?? null,
-      known: e.image.width != null || e.image.content_type != null,
-      animated: Boolean((e.image.flags ?? 0) & IS_ANIMATED_EMBED),
-    }));
+  return (sentMessage?.embeds ?? []).filter((e) => e.image && e.type !== "image").map((e) => toReport(e.image.url, e.image));
+}
+
+// Aperçu créé par Discord pour l'adresse de la bannière du haut (embed de type « image » ou « gifv »).
+// Renvoie null tant que Discord n'a pas encore créé l'aperçu.
+export function unfurlReport(message, bannerUrl) {
+  const e = (message?.embeds ?? []).find((x) => (x.type === "image" || x.type === "gifv") && x.url === bannerUrl);
+  if (!e) return null;
+  return toReport(bannerUrl, e.thumbnail ?? e.image ?? e.video);
 }

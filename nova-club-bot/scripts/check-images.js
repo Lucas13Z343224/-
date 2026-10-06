@@ -12,10 +12,15 @@ const local = process.argv.includes("--local");
 const MAX_ASSET_BYTES = 25 * 1024 * 1024; // limite Cloudflare par fichier statique
 const HEAVY_BYTES = 10 * 1024 * 1024; // au-delà, Discord peut être lent à afficher le GIF
 
+// Seules les images de la position choisie (banner_position) sont vérifiées.
+const position = String(config.banner_position ?? "haut").toLowerCase();
+const INACTIVE_KEY = position === "encadre" ? "banner_haut_url" : "banner_url";
+
 function collectUrls(obj, prefix = "", out = []) {
   for (const [key, value] of Object.entries(obj)) {
     const field = prefix ? `${prefix}.${key}` : key;
     if (field === "errors" || field === "media") continue;
+    if (key === INACTIVE_KEY) continue; // bannière de l'autre position : non utilisée, donc non vérifiée
     if (typeof value === "string" && key.endsWith("_url") && value) out.push({ field, url: value });
     else if (value && typeof value === "object") collectUrls(value, field, out);
   }
@@ -51,6 +56,7 @@ let errors = 0;
 // Une même image peut être utilisée à plusieurs endroits (ex. /annonce) : on ne la vérifie qu'une fois.
 const urls = collectUrls(config).filter((item, i, all) => all.findIndex((o) => o.url === item.url) === i);
 console.log(local ? "Vérification des fichiers du dossier public/ :\n" : "Vérification des adresses en ligne :\n");
+console.log(`Position des bannières : « ${position} » (${position === "encadre" ? "bannières « encadre »" : "bannières « -haut »"} vérifiées)\n`);
 
 for (const { field, url } of urls) {
   let u;
