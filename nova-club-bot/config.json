@@ -2,8 +2,10 @@
   "_aide": "Tous les textes du bot sont ici. Modifie seulement ce qui est entre guillemets à droite des deux-points, puis redéploie (npx wrangler deploy). Les valeurs marquées « À REMPLACER » sont des exemples. Dans les textes : **gras**, *italique*, - listes, \\n = retour à la ligne. Variables possibles : {user}, {category}, {channel}, {staff}, {role}, {prix}, {lien}, {salon_questions}, {categories}.",
   "server_name": "NOVA CLUB | E-commerce",
   "color": "#FF6B1A",
-  "banner_position": "haut",
-  "_banner_position_aide": "Où s'affiche la bannière : \"haut\" = grande image TOUT EN HAUT du message, au-dessus de l'encadré (adresse « -haut » mise dans le contenu du message) ; \"encadre\" = ancienne bannière dans l'encadré, en bas. Pour revenir en arrière : mets \"encadre\", redéploie et republie les panneaux.",
+  "banner_position": "haut_encadre",
+  "_banner_position_aide": "Où s'affiche la bannière : \"haut_encadre\" (recommandé) = un premier encadré ne contenant que la bannière « -haut », puis l'encadré habituel, dans le même message ; \"haut\" = adresse de la bannière « -haut » dans le texte du message (Discord doit en faire un aperçu, ce qui ne marche pas toujours) ; \"encadre\" = ancienne bannière dans l'encadré, en bas. Pour changer : modifie la valeur, redéploie (npx wrangler deploy) et republie les panneaux.",
+  "banner_embed_color": "#2B2D31",
+  "_banner_embed_color_aide": "Couleur du premier encadré (bannière seule) en mode \"haut_encadre\". #2B2D31 = couleur du fond de Discord (thème sombre) : la barre latérale devient invisible.",
   "timezone": "Europe/Paris",
   "footer": "NOVA CLUB | E-commerce",
   "commands": {
@@ -294,6 +296,6 @@
     "annonce_role_missing": "⚠️ Tu as choisi de mentionner un rôle : renseigne l'option « role » de la commande.",
     "annonce_empty": "⚠️ Le titre et le texte de l'annonce ne peuvent pas être vides.",
     "embed_too_long": "⚙️ Le texte du panneau est trop long pour Discord (limite : {max} caractères, actuellement {size}). Raccourcis-le dans config.json.",
-    "invalid_banner_position": "⚙️ Dans config.json, « banner_position » doit valoir \"haut\" ou \"encadre\" (valeur actuelle : {value})."
+    "invalid_banner_position": "⚙️ Dans config.json, « banner_position » doit valoir \"haut_encadre\", \"haut\" ou \"encadre\" (valeur actuelle : {value})."
   }
 }

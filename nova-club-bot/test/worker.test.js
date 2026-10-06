@@ -95,23 +95,35 @@ const withQuestionsChannel = async (fn) => {
 };
 const buttons = (body) => (body.components ?? []).flatMap((r) => r.components);
 const HOST = "https://nova-club-bot.novaclub.workers.dev/";
-// Mise en page commune : un seul message, un seul encadré à barre orange, pas de composants V2.
-// Position « haut » (par défaut) : bannière « -haut » = contenu du message, seule sur sa ligne, rien dans l'encadré.
-// Position « encadre » : ancienne bannière dans l'encadré (embed.image), pas de contenu.
-function assertLayout(body, banner, title, position = "haut") {
+const BAR = 0x2b2d31; // couleur du fond de Discord : barre latérale invisible
+// Mise en page commune : un seul message, pas de composants V2, encadré principal à barre orange.
+// "haut_encadre" (défaut) : 1er encadré = bannière « -haut » seule (sans titre ni texte ni pied de page, barre #2B2D31),
+//                           2e encadré = l'encadré habituel ; pas de contenu texte.
+// "haut"    : bannière « -haut » = contenu du message, seule sur sa ligne, rien dans l'encadré.
+// "encadre" : ancienne bannière dans l'encadré (embed.image), pas de contenu.
+// Renvoie l'encadré principal.
+function assertLayout(body, banner, title, position = "haut_encadre") {
   assert.equal(body.flags, undefined);
-  assert.equal(body.embeds.length >= 1, true);
-  const e = body.embeds[0];
-  assert.equal(e.title, title);
-  assert.equal(e.color, ORANGE);
-  if (position === "haut") {
+  let e;
+  if (position === "haut_encadre") {
+    assert.equal(body.content, undefined);
+    const [first, main] = body.embeds;
+    assert.deepEqual(first, { color: BAR, image: { url: `${HOST}${banner}-haut.gif?v=2` } }); // l'image, rien d'autre
+    e = main;
+    assert.equal(e.image, undefined);
+  } else if (position === "haut") {
+    e = body.embeds[0];
     assert.equal(body.content, `${HOST}${banner}-haut.gif?v=2`);
     assert.ok(!body.content.includes("\n"));
     assert.equal(e.image, undefined);
   } else {
+    e = body.embeds[0];
     assert.equal(body.content, undefined);
     assert.equal(e.image.url, `${HOST}${banner}.gif?v=2`);
   }
+  assert.equal(e.title, title);
+  assert.equal(e.color, ORANGE);
+  assert.equal(e.footer, undefined);
   return e;
 }
 const withPosition = async (position, fn) => {
@@ -183,14 +195,14 @@ test("/panel-tickets signale l'identifiant du salon questions à remplacer", asy
 
 test("/panel-formation : encadré avec prix et lien, 2e encadré image, bouton lien", async () => {
   const { body } = await publish("panel-formation");
-  assert.equal(body.embeds.length, 2);
+  assert.equal(body.embeds.length, 3); // bannière, encadré, image de présentation
   const e = assertLayout(body, "banniere-formation", "🎓 Formation dropshipping eBay & Etsy");
   assert.match(e.description, /eBay\*\* et \*\*Etsy/);
   assert.match(e.description, /communauté privée/);
   assert.match(e.description, /Nova Autopilot/);
   assert.match(e.description, /À REMPLACER \(ex\. 97 €\)/);
   assert.match(e.description, /https:\/\/exemple\.com\/a-remplacer-formation/);
-  const second = body.embeds[1];
+  const second = body.embeds[2];
   assert.equal(second.color, ORANGE);
   assert.match(second.image.url, /decouverte-formation\.png\?v=2$/);
   const [btn] = buttons(body);
@@ -266,25 +278,40 @@ const unfurlRoutes = (unfurl) => {
   });
 };
 
-test("position « haut » : le bot relit le message et confirme le GIF animé", async () => {
-  unfurlRoutes((url) => ({ type: "image", url, thumbnail: { url, width: 800, height: 200, flags: 1 << 5 } }));
-  const { edit, body } = await publish("panel-faq");
+test("position « haut » : le bot relit le message et confirme le GIF animé", () =>
+  withPosition("haut", async () => {
+    unfurlRoutes((url) => ({ type: "image", url, thumbnail: { url, width: 800, height: 200, flags: 1 << 5 } }));
+    const { edit, body } = await publish("panel-faq");
+    assert.match(edit, /banniere-faq-haut\.gif : GIF animé reconnu/);
+    assert.equal(calls.filter((c) => c.method === "GET" && c.url.includes("/messages/888")).length, 1);
+    assert.equal(body.content, `${HOST}banniere-faq-haut.gif?v=2`);
+  }));
+
+test("position « haut » : aperçu pas encore créé par Discord → message d'attente", () =>
+  withPosition("haut", async () => {
+    unfurlRoutes(null);
+    const { edit } = await publish("panel-faq");
+    assert.match(edit, /banniere-faq-haut\.gif : Discord n'a pas encore affiché la bannière du haut/);
+  }));
+
+test("position « haut » : l'aperçu d'un autre lien du texte n'est pas pris pour la bannière", () =>
+  withPosition("haut", async () => {
+    unfurlRoutes(() => ({ type: "image", url: "https://autre.example/x.gif", thumbnail: { width: 1, flags: 1 << 5 } }));
+    const { edit } = await publish("panel-faq");
+    assert.doesNotMatch(edit, /GIF animé reconnu/);
+    assert.match(edit, /pas encore affiché/);
+  }));
+
+// Mode par défaut « haut_encadre » : Discord lit l'image du premier encadré dès la publication (pas de relecture).
+test("position « haut_encadre » : la bannière du premier encadré est reconnue animée, sans relire le message", async () => {
+  route("POST", /999000000000000000\/messages$/, (call) => {
+    const sent = JSON.parse(call.body);
+    sent.embeds[0].image = { ...sent.embeds[0].image, content_type: "image/gif", width: 800, height: 120, flags: 1 << 5 };
+    return jsonRes({ id: "888000000000000000", ...sent });
+  });
+  const { edit } = await publish("panel-faq");
   assert.match(edit, /banniere-faq-haut\.gif : GIF animé reconnu/);
-  assert.equal(calls.filter((c) => c.method === "GET" && c.url.includes("/messages/888")).length, 1);
-  assert.equal(body.content, `${HOST}banniere-faq-haut.gif?v=2`);
-});
-
-test("position « haut » : aperçu pas encore créé par Discord → message d'attente", async () => {
-  unfurlRoutes(null);
-  const { edit } = await publish("panel-faq");
-  assert.match(edit, /banniere-faq-haut\.gif : Discord n'a pas encore affiché la bannière du haut/);
-});
-
-test("position « haut » : l'aperçu d'un autre lien du texte n'est pas pris pour la bannière", async () => {
-  unfurlRoutes(() => ({ type: "image", url: "https://autre.example/x.gif", thumbnail: { width: 1, flags: 1 << 5 } }));
-  const { edit } = await publish("panel-faq");
-  assert.doesNotMatch(edit, /GIF animé reconnu/);
-  assert.match(edit, /pas encore affiché/);
+  assert.ok(!calls.some((c) => c.method === "GET"));
 });
 
 test("tous les panneaux respectent les limites de Discord", async () => {
@@ -364,7 +391,7 @@ test("/annonce : options → formulaire → publication (bannière par défaut, 
   const body = JSON.parse(post.body);
   const e = assertLayout(body, "banniere-annonce", "Titre de test");
   assert.equal(e.description, "**Gras** et une liste :\n- un\n- deux");
-  assert.equal(body.content, `${HOST}banniere-annonce-haut.gif?v=2`); // pas de ping : l'adresse seule
+  assert.equal(body.content, undefined); // pas de ping : aucun contenu texte
   assert.deepEqual(body.allowed_mentions, { parse: [] });
   assert.match(JSON.parse(originalEdit().body).content, /<#999000000000000000>/);
 });
@@ -378,9 +405,9 @@ test("/annonce : salon par défaut = salon actuel, image choisie, @everyone", as
   await submitAnnonce(modal.data.data.custom_id, "T", "Texte");
   const post = calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages"));
   const body = JSON.parse(post.body);
-  assert.equal(body.embeds[0].image, undefined);
-  // Le ping est seul sur sa ligne, AVANT l'adresse de la bannière du haut
-  assert.equal(body.content, `@everyone\n${HOST}banniere-outils-haut.gif?v=2`);
+  assert.equal(body.embeds[0].image.url, `${HOST}banniere-outils-haut.gif?v=2`); // 1er encadré = bannière seule
+  assert.equal(body.embeds[0].title, undefined);
+  assert.equal(body.content, "@everyone"); // le ping reste dans le contenu, avant les encadrés
   assert.deepEqual(body.allowed_mentions, { parse: ["everyone"] });
   assert.match(JSON.parse(originalEdit().body).content, /Mentionner @everyone/);
 });
@@ -393,8 +420,9 @@ test("/annonce : ping d'un rôle précis, image « aucune »", async () => {
   calls = [];
   await submitAnnonce(modal.data.data.custom_id, "T", "Texte");
   const body = JSON.parse(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
-  assert.equal(body.content, "<@&555000000000000000>"); // image « aucune » : seulement le ping
+  assert.equal(body.content, "<@&555000000000000000>");
   assert.deepEqual(body.allowed_mentions, { roles: ["555000000000000000"] });
+  assert.equal(body.embeds.length, 1); // image « aucune » : pas d'encadré de bannière
   assert.equal(body.embeds[0].image, undefined);
 });
 
@@ -551,21 +579,93 @@ test("banner_position « encadre » : /annonce met la bannière dans l'encadré 
     assert.equal(body.embeds[0].image.url, `${HOST}banniere-annonce.gif?v=2`);
   }));
 
-test("banner_position « haut » : /panel-formation garde decouverte-formation.png dans l'encadré", async () => {
-  const { body } = await publish("panel-formation");
-  assert.equal(body.embeds[0].image, undefined);
-  assert.equal(body.embeds[1].image.url, `${HOST}decouverte-formation.png?v=2`);
-  assert.equal(body.content, `${HOST}banniere-formation-haut.gif?v=2`);
+const PANEL_NAMES = { "panel-infos": "informations", "panel-reglement": "reglement", "panel-tickets": "tickets", "panel-formation": "formation", "panel-outils": "outils", "panel-faq": "faq", "panel-autopilot": "autopilot" };
+
+test("banner_position « haut_encadre » (défaut) : tous les panneaux = encadré bannière seul + encadré habituel", () =>
+  withQuestionsChannel(async (config) => {
+    assert.equal(config.banner_position, "haut_encadre");
+    for (const [cmd, n] of Object.entries(PANEL_NAMES)) {
+      const { body } = await publish(cmd);
+      assert.equal(body.content, undefined, cmd);
+      assert.deepEqual(body.embeds[0], { color: BAR, image: { url: `${HOST}banniere-${n}-haut.gif?v=2` } }, cmd);
+      assert.ok(body.embeds[1].title && body.embeds[1].description, cmd);
+      assert.equal(body.embeds[1].color, ORANGE, cmd);
+      assert.equal(body.embeds[1].image, undefined, cmd);
+    }
+  }));
+
+test("banner_position « haut_encadre » : menus et boutons restent sous le message", () =>
+  withQuestionsChannel(async () => {
+    const tickets = (await publish("panel-tickets")).body;
+    assert.equal(tickets.components[0].components[0].custom_id, "ticket:create");
+    const rules = (await publish("panel-reglement")).body;
+    assert.equal(rules.components[0].components[0].custom_id, "rules:accept");
+    const formation = (await publish("panel-formation")).body;
+    assert.equal(formation.components[0].components[0].url, "https://exemple.com/a-remplacer-formation");
+    assert.equal(formation.embeds[2].image.url, `${HOST}decouverte-formation.png?v=2`);
+  }));
+
+test("banner_position « haut_encadre » : la couleur du 1er encadré est réglable (banner_embed_color)", async () => {
+  const config = (await import("../config.json", { with: { type: "json" } })).default;
+  config.banner_embed_color = "#313338";
+  try {
+    const { body } = await publish("panel-faq");
+    assert.equal(body.embeds[0].color, 0x313338);
+  } finally {
+    config.banner_embed_color = "#2B2D31";
+  }
+});
+
+test("banner_position « haut » : /panel-formation garde decouverte-formation.png dans l'encadré", () =>
+  withPosition("haut", async () => {
+    const { body } = await publish("panel-formation");
+    assert.equal(body.embeds.length, 2);
+    assert.equal(body.embeds[0].image, undefined);
+    assert.equal(body.embeds[1].image.url, `${HOST}decouverte-formation.png?v=2`);
+    assert.equal(body.content, `${HOST}banniere-formation-haut.gif?v=2`);
+  }));
+
+test("banner_position « haut » : tous les panneaux = adresse seule dans le contenu", () =>
+  withPosition("haut", () =>
+    withQuestionsChannel(async () => {
+      for (const [cmd, n] of Object.entries(PANEL_NAMES)) {
+        const { body } = await publish(cmd);
+        assert.equal(body.content, `${HOST}banniere-${n}-haut.gif?v=2`, cmd);
+        assert.equal(body.embeds[0].image === undefined || cmd === "panel-formation", true, cmd);
+      }
+    }),
+  ));
+
+test("banner_position « haut » : /annonce garde le ping avant l'adresse, sur une ligne séparée", () =>
+  withPosition("haut", async () => {
+    const modal = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce", options: [{ name: "ping", type: 3, value: "everyone" }] } });
+    calls = [];
+    await submitAnnonce(modal.data.data.custom_id, "T", "Texte");
+    const body = JSON.parse(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
+    assert.equal(body.content, `@everyone\n${HOST}banniere-annonce-haut.gif?v=2`);
+    assert.deepEqual(body.allowed_mentions, { parse: ["everyone"] });
+  }));
+
+test("banner_position « haut_encadre » : /annonce sans image choisie → bannière par défaut, ping dans le contenu", async () => {
+  const modal = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce", options: [{ name: "role", type: 8, value: "555000000000000000" }] } });
+  calls = [];
+  await submitAnnonce(modal.data.data.custom_id, "Titre", "Texte");
+  const body = JSON.parse(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
+  assert.equal(body.content, "<@&555000000000000000>");
+  assert.deepEqual(body.allowed_mentions, { roles: ["555000000000000000"] });
+  assert.deepEqual(body.embeds[0], { color: BAR, image: { url: `${HOST}banniere-annonce-haut.gif?v=2` } });
+  assert.equal(body.embeds[1].title, "Titre");
+  assert.equal(body.embeds[1].color, ORANGE);
 });
 
 test("banner_position invalide → message clair, rien n'est publié", () =>
   withPosition("dessous", async () => {
     const { body, edit } = await publish("panel-faq");
     assert.equal(body, undefined);
-    assert.match(edit, /« banner_position » doit valoir "haut" ou "encadre"/);
+    assert.match(edit, /« banner_position » doit valoir "haut_encadre", "haut" ou "encadre"/);
   }));
 
-test("le menu des tickets est remis à zéro sans toucher au contenu (bannière du haut conservée)", async () => {
+test("le menu des tickets est remis à zéro sans toucher au message (bannière et encadré conservés)", async () => {
   const r = await send({ type: 3, member, message: { flags: 0 }, data: { custom_id: "ticket:create", component_type: 3, values: ["support"] } });
   assert.equal(r.data.type, 7);
   assert.equal(r.data.data.content, undefined); // seul le menu est renvoyé : le contenu et l'encadré restent

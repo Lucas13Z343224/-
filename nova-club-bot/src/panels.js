@@ -49,23 +49,34 @@ function checkMax(list, field, max) {
 }
 
 // Position de la bannière (réglage `banner_position` de config.json) :
-//   "haut"    → l'adresse de la bannière « -haut » est le CONTENU du message : Discord l'affiche en grande
-//               image tout en haut, au-dessus de l'encadré, dans le même message ;
+//   "haut_encadre" (défaut) → DEUX encadrés dans le même message : le premier ne contient que la bannière
+//               « -haut » (embed.image, couleur #2B2D31 = barre latérale invisible), le second est l'encadré habituel ;
+//   "haut"    → l'adresse de la bannière « -haut » est le CONTENU du message (aperçu de lien de Discord) ;
 //   "encadre" → l'ancienne bannière est dans l'encadré, en bas (embed.image).
+const POSITIONS = ["haut_encadre", "haut", "encadre"];
+
 export function bannerPosition() {
-  const raw = String(config.banner_position ?? "haut").trim().toLowerCase();
-  if (raw !== "haut" && raw !== "encadre") {
+  const raw = String(config.banner_position ?? "haut_encadre").trim().toLowerCase();
+  if (!POSITIONS.includes(raw)) {
     throw new UserError(fill(config.errors.invalid_banner_position, { value: config.banner_position }));
   }
   return raw;
 }
 
-// Renvoie { content, image } à utiliser pour la section de config donnée ({ banner_url, banner_haut_url }).
+// Couleur du premier encadré (bannière seule) : celle du fond de Discord, pour que sa barre soit invisible.
+function bannerBarColor() {
+  const n = parseInt(String(config.banner_embed_color ?? "#2B2D31").replace("#", ""), 16);
+  return Number.isNaN(n) ? 0x2b2d31 : n;
+}
+
+// Renvoie { content, image, bannerEmbed } à utiliser pour la section de config donnée ({ banner_url, banner_haut_url }).
 export function banner(section, field = "banner") {
-  if (bannerPosition() === "haut") {
-    return { content: section.banner_haut_url ? imageUrl(section.banner_haut_url, `${field}_haut_url`) : undefined, image: undefined };
-  }
-  return { content: undefined, image: section.banner_url || undefined };
+  const position = bannerPosition();
+  if (position === "encadre") return { content: undefined, image: section.banner_url || undefined, bannerEmbed: undefined };
+  const url = section.banner_haut_url ? imageUrl(section.banner_haut_url, `${field}_haut_url`) : undefined;
+  if (position === "haut") return { content: url, image: undefined, bannerEmbed: undefined };
+  // haut_encadre : encadré contenant UNIQUEMENT l'image (ni titre, ni texte, ni pied de page)
+  return { content: undefined, image: undefined, bannerEmbed: url ? { color: bannerBarColor(), image: { url } } : undefined };
 }
 
 // Un encadré : titre, description (sections de texte), bannière en bas, barre de couleur.
@@ -80,7 +91,7 @@ const section = (heading, body) => (heading ? `**${heading}**\n${body}` : body);
 const join = (...parts) => parts.filter(Boolean).join("\n\n");
 
 // Vérifie les limites de Discord avant l'envoi, avec un message clair.
-function message(embeds, components, content) {
+function message(embeds, components, content, bannerEmbed) {
   for (const e of embeds) {
     if ((e.title ?? "").length > EMBED_TITLE_MAX) {
       throw new UserError(fill(config.errors.embed_too_long, { max: EMBED_TITLE_MAX, size: e.title.length }));
@@ -91,7 +102,7 @@ function message(embeds, components, content) {
   }
   const total = embeds.reduce((n, e) => n + (e.title ?? "").length + (e.description ?? "").length, 0);
   if (total > EMBED_TOTAL_MAX) throw new UserError(fill(config.errors.embed_too_long, { max: EMBED_TOTAL_MAX, size: total }));
-  const msg = { embeds, allowed_mentions: { parse: [] } };
+  const msg = { embeds: bannerEmbed ? [bannerEmbed, ...embeds] : embeds, allowed_mentions: { parse: [] } };
   if (content) msg.content = content;
   if (components?.length) msg.components = components;
   return msg;
@@ -107,6 +118,7 @@ export function infosPanel() {
     [embed({ title: c.title, description: join(c.welcome, section(c.channels_title, list)), image: b.image })],
     undefined,
     b.content,
+    b.bannerEmbed,
   );
 }
 
@@ -124,6 +136,7 @@ export function reglementPanel() {
     ],
     [row({ type: 2, style: 3, custom_id: "rules:accept", label: r.button_label, emoji: emoji(r.button_emoji) })],
     b.content,
+    b.bannerEmbed,
   );
 }
 
@@ -162,6 +175,7 @@ export function ticketsPanel() {
     ],
     [ticketSelectRow()],
     b.content,
+    b.bannerEmbed,
   );
 }
 
@@ -180,7 +194,7 @@ export function formationPanel() {
   ];
   // Deuxième encadré : l'image de présentation en grande image.
   if (f.image_url) embeds.push({ color: COLOR, image: { url: imageUrl(f.image_url) } });
-  return message(embeds, [row(linkButton(f.button_label, lien, f.button_emoji))], b.content);
+  return message(embeds, [row(linkButton(f.button_label, lien, f.button_emoji))], b.content, b.bannerEmbed);
 }
 
 export function outilsPanel() {
@@ -190,7 +204,7 @@ export function outilsPanel() {
     .map((tool, i) => `🔹 **${tool.name}**\n${tool.description}\n[${o.link_label} →](${checkUrl(tool.url, `outils.tools[${i}].url`)})`)
     .join("\n\n");
   const b = banner(o, "outils.banner");
-  return message([embed({ title: o.title, description: join(o.intro, tools), image: b.image })], undefined, b.content);
+  return message([embed({ title: o.title, description: join(o.intro, tools), image: b.image })], undefined, b.content, b.bannerEmbed);
 }
 
 export function faqPanel() {
@@ -198,7 +212,7 @@ export function faqPanel() {
   checkMax(q.questions, "faq.questions", 15);
   const body = q.questions.map((item) => section(`${q.question_emoji} ${item.question}`, item.answer)).join("\n\n");
   const b = banner(q, "faq.banner");
-  return message([embed({ title: q.title, description: body, image: b.image })], undefined, b.content);
+  return message([embed({ title: q.title, description: body, image: b.image })], undefined, b.content, b.bannerEmbed);
 }
 
 export function autopilotPanel() {
@@ -216,6 +230,7 @@ export function autopilotPanel() {
     ],
     [row(linkButton(a.button_label, lien, a.button_emoji))],
     b.content,
+    b.bannerEmbed,
   );
 }
 
@@ -227,7 +242,7 @@ export function annonceImages() {
 export function annoncePanel({ title, text, imageValue }) {
   const choice = annonceImages().find((i) => i.value === imageValue) ?? annonceImages().find((i) => i.value === config.annonce.default_image);
   const b = banner(choice ?? {}, "annonce.images.banner");
-  return message([embed({ title, description: text, image: b.image })], undefined, b.content);
+  return message([embed({ title, description: text, image: b.image })], undefined, b.content, b.bannerEmbed);
 }
 
 export const PANELS = {
