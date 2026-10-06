@@ -7,11 +7,13 @@ Place ici les images du bot (elles seront publiques) :
   banniere-outils.gif
   banniere-faq.gif
   banniere-autopilot.gif
+  banniere-annonce.gif
   decouverte-formation.png
 
 Après "npx wrangler deploy", chaque fichier est disponible à l'adresse
 https://nova-club-bot.novaclub.workers.dev/NOM-DU-FICHIER
 (ce fichier LISEZMOI.txt n'est pas publié : il est listé dans .assetsignore).
 
-Pour remplacer une image déjà publiée, change aussi son nom (ex. banniere-tickets-v2.gif)
-et mets à jour l'adresse dans config.json : Discord garde l'ancienne image en cache.
+Pour remplacer une image : copie la nouvelle avec le même nom, puis augmente
+"images_version" dans config.json (ex. "3"), redéploie et republie le panneau.
+Sans cela, Discord peut continuer d'afficher l'ancienne image (cache).

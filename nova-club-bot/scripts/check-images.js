@@ -48,7 +48,8 @@ function describe(name, bytes) {
 }
 
 let errors = 0;
-const urls = collectUrls(config);
+// Une même image peut être utilisée à plusieurs endroits (ex. /annonce) : on ne la vérifie qu'une fois.
+const urls = collectUrls(config).filter((item, i, all) => all.findIndex((o) => o.url === item.url) === i);
 console.log(local ? "Vérification des fichiers du dossier public/ :\n" : "Vérification des adresses en ligne :\n");
 
 for (const { field, url } of urls) {

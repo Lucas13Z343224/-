@@ -1,5 +1,5 @@
 {
-  "_aide": "Tous les textes du bot sont ici. Modifie seulement ce qui est entre guillemets à droite des deux-points, puis redéploie (npx wrangler deploy). Les valeurs marquées « À REMPLACER » sont des exemples. Variables possibles dans certains textes : {user}, {category}, {channel}, {staff}, {role}, {prix}, {lien}, {salon_questions}.",
+  "_aide": "Tous les textes du bot sont ici. Modifie seulement ce qui est entre guillemets à droite des deux-points, puis redéploie (npx wrangler deploy). Les valeurs marquées « À REMPLACER » sont des exemples. Dans les textes : **gras**, *italique*, - listes, \\n = retour à la ligne. Variables possibles : {user}, {category}, {channel}, {staff}, {role}, {prix}, {lien}, {salon_questions}, {categories}.",
   "server_name": "NOVA CLUB | E-commerce",
   "color": "#FF6B1A",
   "timezone": "Europe/Paris",
@@ -12,12 +12,17 @@
     "panel_outils": "Publier le panneau des outils",
     "panel_faq": "Publier la FAQ",
     "panel_autopilot": "Publier le panneau Nova Autopilot",
-    "option_salon": "Salon où publier le panneau (par défaut : le salon actuel)"
+    "option_salon": "Salon où publier le panneau (par défaut : le salon actuel)",
+    "annonce": "Publier une annonce (un formulaire s'ouvre)",
+    "option_ping": "Qui prévenir avec l'annonce",
+    "option_role": "Le rôle à mentionner (si « ping » vaut « Un rôle »)",
+    "option_image": "Bannière affichée en bas de l'annonce (par défaut : Annonce)",
+    "option_salon_annonce": "Salon où publier l'annonce (par défaut : le salon actuel)"
   },
   "infos": {
     "title": "📌 Informations",
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-informations.gif",
-    "welcome": "Bienvenue sur **NOVA CLUB | E-commerce** ! Ici, on apprend, on partage et on avance ensemble sur nos projets de boutique en ligne. Voici les salons à connaître pour bien démarrer :",
+    "welcome": "Bienvenue sur **NOVA CLUB | E-commerce** ! Ici, on apprend, on partage et on avance ensemble sur nos projets de boutique en ligne.",
     "channels_title": "🧭 Les salons utiles",
     "channels": [
       {
@@ -31,7 +36,7 @@
   "reglement": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-reglement.gif",
     "title": "📜 Règlement du serveur",
-    "intro": "Pour que NOVA CLUB reste un espace utile et agréable, merci de respecter ces règles :",
+    "intro": "Pour que NOVA CLUB reste un espace utile et agréable, merci de respecter ces règles.",
     "rules": [
       "Reste respectueux et bienveillant avec tous les membres.",
       "Pas de spam, de publicité ni de message privé non sollicité.",
@@ -45,13 +50,15 @@
     "button_emoji": "✅",
     "success": "✅ Merci ! Le rôle {role} t'a été attribué. Bienvenue dans le club !",
     "already": "ℹ️ Tu as déjà accepté le règlement, tu as déjà le rôle {role}.",
-    "published": "✅ Le règlement a été publié dans {channel}."
+    "published": "✅ Le règlement a été publié dans {channel}.",
+    "rules_title": "📋 Les règles",
+    "outro_title": "✅ Pour continuer"
   },
   "tickets": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-tickets.gif",
     "questions_channel_id": "REMPLACE_PAR_ID_SALON_QUESTIONS",
-    "panel_title": "🎫 Contacter l'équipe",
-    "panel_description": "Besoin de contacter l'équipe ? Choisis la raison de ta demande dans le menu ci-dessous : un ticket privé sera créé automatiquement.\n\n⚠️ Pour les questions sur ta boutique, utilise plutôt le salon {salon_questions}.",
+    "panel_title": "🎫 Support — Nova Club",
+    "panel_description": "Besoin de contacter l'équipe ? Choisis la raison de ta demande dans le menu ci-dessous : un ticket privé sera créé automatiquement.\n\n**📂 Les catégories**\n{categories}\n\n**⚠️ Avant d'ouvrir un ticket**\nPour les questions sur ta boutique, utilise plutôt le salon {salon_questions}.",
     "select_placeholder": "Sélectionne la raison de ton ticket",
     "old_panel": "ℹ️ Ce panneau a été mis à jour : choisis directement la raison de ta demande dans le menu, le ticket se crée tout seul.",
     "categories": [
@@ -111,30 +118,32 @@
     "label_nobody": "Personne",
     "label_unknown": "Inconnu",
     "label_attachment": "Pièce jointe",
-    "label_embed": "Encadré"
+    "label_embed": "Encadré",
+    "panel_description_aide": "{categories} est remplacé par la liste de tes catégories (section « categories » ci-dessous). {salon_questions} est remplacé par le salon indiqué dans questions_channel_id."
   },
   "formation": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-formation.gif",
     "image_url": "https://nova-club-bot.novaclub.workers.dev/decouverte-formation.png",
     "title": "🎓 Formation dropshipping eBay & Etsy",
-    "description": "Une formation pour apprendre, étape par étape, à vendre sur **eBay** et **Etsy** avec la méthode du dropshipping.",
+    "description": "Une formation pour apprendre, étape par étape, à vendre sur **eBay** et **Etsy**.",
     "points": [
       "👥 Accès à la communauté privée NOVA CLUB",
       "🤖 Outil **Nova Autopilot** inclus",
       "📚 Des modules clairs, du premier produit à la gestion des commandes"
     ],
-    "details": "💶 Prix : **{prix}**\n🔗 {lien}",
+    "details": "**Prix :** {prix}\n**Découvrir la formation :** {lien}",
     "prix": "À REMPLACER (ex. 97 €)",
     "lien": "https://exemple.com/a-remplacer-formation",
     "button_label": "Découvrir la formation",
     "button_emoji": "🚀",
-    "published": "✅ Le panneau de la formation a été publié dans {channel}."
+    "published": "✅ Le panneau de la formation a été publié dans {channel}.",
+    "points_title": "✨ Ce que tu obtiens",
+    "details_title": "💶 Prix et accès"
   },
   "outils": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-outils.gif",
-    "title": "🧰 Outils pour ton business",
-    "intro": "Une sélection d'outils utiles pour lancer et gérer ta boutique en ligne. Clique sur « Ouvrir » pour accéder à chaque outil.",
-    "button_label": "Ouvrir",
+    "title": "🛠️ Outils pour ton business",
+    "intro": "Une sélection d'outils utiles pour lancer et gérer ta boutique en ligne.",
     "tools": [
       {
         "name": "Outil 1 — À REMPLACER",
@@ -152,11 +161,12 @@
         "url": "https://exemple.com/a-remplacer-outil-3"
       }
     ],
-    "published": "✅ Le panneau des outils a été publié dans {channel}."
+    "published": "✅ Le panneau des outils a été publié dans {channel}.",
+    "link_label": "Ouvrir l'outil"
   },
   "faq": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-faq.gif",
-    "title": "❔ Questions fréquentes",
+    "title": "❓ FAQ",
     "questions": [
       {
         "question": "Qu'est-ce que le dropshipping ?",
@@ -175,12 +185,13 @@
         "answer": "Chaque plateforme a ses propres règles. Lis-les avant de vendre et ne vends que des produits que tu as le droit de vendre. L'équipe ne peut pas garantir les décisions des plateformes."
       }
     ],
-    "published": "✅ La FAQ a été publiée dans {channel}."
+    "published": "✅ La FAQ a été publiée dans {channel}.",
+    "question_emoji": "💬"
   },
   "autopilot": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-autopilot.gif",
     "title": "🤖 Nova Autopilot",
-    "description": "Nova Autopilot est l'outil qui t'aide à organiser le quotidien de ta boutique en ligne :",
+    "description": "**Nova Autopilot** t'aide à organiser le quotidien de ta boutique en ligne, à partir d'un seul outil.",
     "features": [
       "🔎 **Trouver des produits** à proposer",
       "📦 **Publication groupée** de tes annonces",
@@ -192,14 +203,57 @@
     "lien_autopilot": "https://exemple.com/a-remplacer-autopilot",
     "button_label": "Découvrir Nova Autopilot",
     "button_emoji": "🤖",
-    "published": "✅ Le panneau Nova Autopilot a été publié dans {channel}."
+    "published": "✅ Le panneau Nova Autopilot a été publié dans {channel}.",
+    "features_title": "⚙️ Ce que fait l'outil"
   },
   "media": {
     "_aide": "Messages affichés à l'administrateur après publication d'un panneau : Discord indique s'il a bien lu chaque image.",
     "animated": "🎞️ {file} : GIF animé reconnu par Discord.",
     "image_ok": "🖼️ {file} : image reconnue par Discord.",
     "not_image": "⚠️ {file} : Discord ne reçoit pas une image ({type}). Vérifie que le fichier est bien dans public/ et redéploie.",
-    "pending": "⏳ {file} : Discord n'a pas encore analysé l'image. Vérifie l'affichage dans le salon ; si elle n'apparaît pas, lance npm run check-images."
+    "pending": "⏳ {file} : Discord n'a pas encore analysé l'image. Vérifie l'affichage dans le salon ; si elle n'apparaît pas, lance npm run check-images.",
+    "gif_unconfirmed": "🖼️ {file} : GIF reconnu par Discord, mais pas signalé comme animé. Vérifie à l'écran ; sinon remplace le fichier par un vrai GIF animé (npm run check-images)."
+  },
+  "images_version": "2",
+  "_images_version_aide": "Ajouté à la fin des adresses d'images (?v=2) pour que Discord recharge une image remplacée. Quand tu remplaces une image par une nouvelle version, augmente ce nombre (3, 4…) et redéploie, puis republie les panneaux.",
+  "annonce": {
+    "modal_title": "Nouvelle annonce",
+    "label_title": "Titre",
+    "label_text": "Texte",
+    "label_text_help": "Gras, emojis et listes sont acceptés.",
+    "default_image": "annonce",
+    "images": [
+      {
+        "value": "annonce",
+        "label": "Annonce",
+        "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-annonce.gif"
+      },
+      {
+        "value": "formation",
+        "label": "Formation",
+        "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-formation.gif"
+      },
+      {
+        "value": "outils",
+        "label": "Outils",
+        "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-outils.gif"
+      },
+      {
+        "value": "infos",
+        "label": "Informations",
+        "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-informations.gif"
+      },
+      {
+        "value": "aucune",
+        "label": "Aucune image",
+        "banner_url": ""
+      }
+    ],
+    "ping_none": "Aucun",
+    "ping_everyone": "@everyone",
+    "ping_role": "Un rôle",
+    "published": "✅ L'annonce a été publiée dans {channel}.",
+    "ping_note": "ℹ️ Si personne n'a été notifié : le bot doit avoir la permission « Mentionner @everyone, @here et tous les rôles », ou le rôle doit être mentionnable."
   },
   "errors": {
     "admin_only": "⛔ Cette commande est réservée aux administrateurs.",
@@ -221,6 +275,9 @@
     "generic": "❌ Une erreur inattendue est survenue. Réessaie ; si le problème continue, préviens un administrateur.",
     "unknown_action": "❓ Action inconnue ou plus prise en charge.",
     "invalid_url": "⚙️ Dans config.json, l'adresse « {field} » n'est pas un lien valide (elle doit commencer par https://) : {value}",
-    "too_many_items": "⚙️ Trop d'éléments dans config.json pour ce panneau (« {field} », maximum {max})."
+    "too_many_items": "⚙️ Trop d'éléments dans config.json pour ce panneau (« {field} », maximum {max}).",
+    "annonce_role_missing": "⚠️ Tu as choisi de mentionner un rôle : renseigne l'option « role » de la commande.",
+    "annonce_empty": "⚠️ Le titre et le texte de l'annonce ne peuvent pas être vides.",
+    "embed_too_long": "⚙️ Le texte du panneau est trop long pour Discord (limite : {max} caractères, actuellement {size}). Raccourcis-le dans config.json."
   }
 }

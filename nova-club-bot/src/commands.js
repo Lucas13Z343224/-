@@ -22,6 +22,36 @@ function adminCommand(name, description) {
   };
 }
 
+const annonceCommand = {
+  name: "annonce",
+  description: config.commands.annonce,
+  type: 1,
+  default_member_permissions: ADMINISTRATOR,
+  contexts: [0],
+  options: [
+    { ...salonOption, description: config.commands.option_salon_annonce },
+    {
+      type: 3, // texte avec choix
+      name: "ping",
+      description: config.commands.option_ping,
+      required: false,
+      choices: [
+        { name: config.annonce.ping_none, value: "none" },
+        { name: config.annonce.ping_everyone, value: "everyone" },
+        { name: config.annonce.ping_role, value: "role" },
+      ],
+    },
+    { type: 8, name: "role", description: config.commands.option_role, required: false }, // rôle
+    {
+      type: 3,
+      name: "image",
+      description: config.commands.option_image,
+      required: false,
+      choices: config.annonce.images.map((i) => ({ name: i.label, value: i.value })),
+    },
+  ],
+};
+
 export const COMMANDS = [
   adminCommand("panel-infos", config.commands.panel_infos),
   adminCommand("panel-reglement", config.commands.panel_reglement),
@@ -30,4 +60,5 @@ export const COMMANDS = [
   adminCommand("panel-outils", config.commands.panel_outils),
   adminCommand("panel-faq", config.commands.panel_faq),
   adminCommand("panel-autopilot", config.commands.panel_autopilot),
+  annonceCommand,
 ];

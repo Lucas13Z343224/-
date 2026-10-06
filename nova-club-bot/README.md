@@ -6,30 +6,34 @@ Pas de connexion permanente, pas de serveur à garder allumé.
 
 Ce que fait le bot :
 
-Chaque panneau affiche sa **bannière animée (GIF) en grande image tout en haut**, puis un **encadré avec la barre orange** (#FF6B1A) sur le côté.
+Chaque panneau est **un seul message avec un seul encadré** (embed), dans cet ordre : un **titre** avec un emoji, le **texte en sections courtes**
+(titres en gras + emojis), puis la **bannière animée (GIF) en bas de l'encadré**, sur toute la largeur, avec la **barre orange** (#FF6B1A) sur le côté.
+Le menu déroulant ou les boutons sont placés **sous** le message.
 
 | Commande / bouton | Effet |
 |---|---|
-| `/panel-infos [salon]` | Bannière `banniere-informations.gif`, texte de bienvenue, liste de salons cliquables avec leur utilité. |
-| `/panel-reglement [salon]` | Bannière `banniere-reglement.gif`, règlement numéroté et bouton **J'ai lu et j'accepte** (donne le rôle Membre). |
-| `/panel-tickets [salon]` | Bannière `banniere-tickets.gif` et menu **Sélectionne la raison de ton ticket** (Support, Problème d'accès, Question sur la formation, Autre). |
-| `/panel-formation [salon]` | Bannière `banniere-formation.gif`, encadré « Formation dropshipping eBay & Etsy » (prix et lien), image `decouverte-formation.png`, bouton **🚀 Découvrir la formation**. |
-| `/panel-outils [salon]` | Bannière `banniere-outils.gif`, encadré « Outils pour ton business » : une ligne par outil avec un bouton **Ouvrir**. |
-| `/panel-faq [salon]` | Bannière `banniere-faq.gif` puis un petit encadré par question. |
-| `/panel-autopilot [salon]` | Bannière `banniere-autopilot.gif`, présentation de Nova Autopilot et bouton lien. |
+| `/panel-infos [salon]` | « 📌 Informations » : texte de bienvenue, salons utiles en liste cliquable, `banniere-informations.gif`. |
+| `/panel-reglement [salon]` | « 📜 Règlement du serveur » : règles numérotées, `banniere-reglement.gif`, bouton **J'ai lu et j'accepte** sous le message (donne le rôle Membre). |
+| `/panel-tickets [salon]` | « 🎫 Support — Nova Club » : liste des catégories (Support, Problème d'accès, Question sur la formation, Autre), consigne vers le salon questions, `banniere-tickets.gif`, et menu **Sélectionne la raison de ton ticket** (pas de bouton). |
+| `/panel-formation [salon]` | « 🎓 Formation dropshipping eBay & Etsy » : texte court avec prix et lien, `banniere-formation.gif`, un 2e encadré avec `decouverte-formation.png` en grande image, bouton **🚀 Découvrir la formation** sous le message. |
+| `/panel-outils [salon]` | « 🛠️ Outils pour ton business » : liste modifiable (nom, description, lien), `banniere-outils.gif`. |
+| `/panel-faq [salon]` | « ❓ FAQ » : une section par question, `banniere-faq.gif`. |
+| `/panel-autopilot [salon]` | « 🤖 Nova Autopilot » : présentation de l'outil, `banniere-autopilot.gif`, bouton lien. Aucune promesse de gains. |
+| `/annonce [salon] [ping] [role] [image]` | Ouvre un **formulaire** (Titre + Texte) puis publie un encadré avec la bannière choisie (`banniere-annonce.gif` par défaut) et la barre orange. |
 | Choix dans le menu des tickets | Crée **directement** un salon privé `ticket-pseudo` (visible par la personne et le rôle Staff) dans la catégorie dédiée. Une seule demande ouverte par personne. |
 | Bouton *Je m'en occupe* | Réservé au staff : indique qui prend en charge le ticket. |
 | Bouton *Fermer le ticket* | Demande confirmation, envoie la transcription (200 derniers messages max, fichier `.txt`) dans le salon de logs, puis supprime le salon. |
 
-Les commandes `/panel-*` sont réservées aux administrateurs (masquées pour les autres et revérifiées par le bot).
+Les commandes `/panel-*` et `/annonce` sont réservées aux administrateurs (masquées pour les autres et revérifiées par le bot).
 Les boutons et menus utilisent des `custom_id` fixes : ils continuent de fonctionner après chaque redéploiement.
 
 **Tous les textes sont dans [`config.json`](config.json)** : titres, règles, catégories, liens, adresses des images, messages d'erreur, couleur…
 
 Les images sont dans le dossier [`public/`](public/) et servies gratuitement par le Worker (fichiers statiques Cloudflare) à des adresses stables,
 par exemple `https://nova-club-bot.novaclub.workers.dev/banniere-tickets.gif`. La page « en ligne ✅ » reste à la racine.
+Le bot ajoute `?v=2` à ces adresses quand il publie (réglage `images_version`) : cela force Discord à recharger une image que tu as remplacée.
 
-> **Tu mets à jour un bot déjà installé ?** Va directement à la section [Mise à jour : panneaux animés](#mise-à-jour--panneaux-animés).
+> **Tu mets à jour un bot déjà installé ?** Va directement à la section [Mise à jour : nouvelle mise en page et /annonce](#mise-à-jour--nouvelle-mise-en-page-et-annonce).
 
 ---
 
@@ -54,7 +58,7 @@ par exemple `https://nova-club-bot.novaclub.workers.dev/banniere-tickets.gif`. L
 17. [Déploiement automatique depuis GitHub](#17-déploiement-automatique-depuis-github)
 18. [Ce que cette méthode ne peut pas faire](#18-ce-que-cette-méthode-ne-peut-pas-faire)
 19. [Dépannage](#19-dépannage)
-20. [Mise à jour : panneaux animés](#mise-à-jour--panneaux-animés)
+20. [Mise à jour : nouvelle mise en page et /annonce](#mise-à-jour--nouvelle-mise-en-page-et-annonce)
 
 ---
 
@@ -174,7 +178,7 @@ Pour NOVA CLUB, c'est déjà fait : `a693b12728f0444e95be152943f837e3`.
 
 ## 9. Déployer le Worker
 
-Place d'abord les 8 images dans le dossier `public/` (voir [la section Images](#images-du-dossier-public)), vérifie-les, puis déploie :
+Place d'abord les 9 images dans le dossier `public/` (voir [la section Images](#images-du-dossier-public)), vérifie-les, puis déploie :
 
 ```powershell
 npm run check-images -- --local
@@ -252,7 +256,7 @@ Pour que le rôle Staff soit vraiment notifié à l'ouverture d'un ticket, activ
 npm run register
 ```
 
-Résultat attendu : `✅ 7 commandes enregistrées : /panel-infos, /panel-reglement, /panel-tickets, /panel-formation, /panel-outils, /panel-faq, /panel-autopilot`.
+Résultat attendu : `✅ 8 commandes enregistrées : /panel-infos, /panel-reglement, /panel-tickets, /panel-formation, /panel-outils, /panel-faq, /panel-autopilot, /annonce`.
 Les commandes sont enregistrées pour ton serveur uniquement : elles apparaissent tout de suite.
 Relance cette commande si tu modifies les descriptions des commandes dans `config.json`.
 
@@ -261,13 +265,13 @@ Relance cette commande si tu modifies les descriptions des commandes dans `confi
 Avec un compte administrateur :
 
 Après chaque publication, le message privé de confirmation indique ce que Discord a lu pour chaque image, par exemple
-`🎞️ banniere-tickets.gif : GIF animé reconnu par Discord.` C'est Discord lui-même qui le confirme dans sa réponse.
+`🎞️ banniere-tickets.gif : GIF animé reconnu par Discord.` C'est Discord lui-même qui le confirme dans sa réponse (si l'image n'est pas encore analysée, le message le dit : regarde alors l'affichage dans le salon).
 
-1. **`/panel-infos`** dans un salon de test → la bannière animée en haut, puis l'encadré orange avec les salons cliquables.
+1. **`/panel-infos`** dans un salon de test → un seul encadré orange : titre, texte, salons cliquables, puis la bannière animée en bas.
    Message « remplace les identifiants de salon » ? Complète `infos.channels` dans `config.json` puis redéploie.
 2. **`/panel-reglement salon:#règlement`** → le règlement numéroté apparaît avec le bouton.
    Avec un compte **non** administrateur (un second compte), clique sur **J'ai lu et j'accepte** → message privé de confirmation et rôle Membre ajouté. Un second clic indique « tu as déjà accepté ».
-3. **`/panel-tickets salon:#support`** → la bannière puis le menu « Sélectionne la raison de ton ticket ».
+3. **`/panel-tickets salon:#support`** → l'encadré « 🎫 Support — Nova Club » avec sa bannière en bas, puis le menu « Sélectionne la raison de ton ticket » en dessous.
    (Message « remplace les identifiants de salon : REMPLACE_PAR_ID_SALON_QUESTIONS » ? Mets l'identifiant du salon questions dans `tickets.questions_channel_id`.)
    - Avec le second compte : choisis une raison → un message privé donne le lien vers `#ticket-pseudo`, et le menu se vide.
    - Choisis à nouveau une raison → « Tu as déjà une demande ouverte ».
@@ -275,7 +279,10 @@ Après chaque publication, le message privé de confirmation indique ce que Disc
    - Clique sur *Fermer le ticket* → confirmation → *Oui, fermer* → la transcription arrive dans le salon de logs, puis le salon disparaît.
 4. **`/panel-formation`**, **`/panel-outils`**, **`/panel-faq`**, **`/panel-autopilot`** → vérifie la bannière, l'encadré et que chaque bouton ouvre le bon lien.
    Tant que les liens d'exemple (`https://exemple.com/a-remplacer-…`) sont là, les boutons mènent vers une page d'exemple : remplace-les dans `config.json`.
-5. Avec le second compte (non administrateur), vérifie que les commandes `/panel-*` n'apparaissent pas.
+5. **`/annonce`** → un formulaire s'ouvre avec « Titre » et « Texte ». Teste avec `ping` = Aucun d'abord, puis `image` = Outils : l'encadré apparaît avec la bannière choisie.
+   Le texte accepte le gras (`**gras**`), les emojis et les listes (une ligne par `- élément`).
+   Pour tester un ping : voir [les pings d'annonce](#les-pings-de-annonce).
+6. Avec le second compte (non administrateur), vérifie que les commandes `/panel-*` et `/annonce` n'apparaissent pas.
 
 Pour voir les erreurs éventuelles en direct : `npx wrangler tail` (ou tableau de bord Cloudflare > Workers > nova-club-bot > Logs).
 
@@ -289,39 +296,52 @@ Ouvre `config.json` avec le Bloc-notes ou VS Code. Les valeurs **À REMPLACER** 
 |---|---|
 | `color` | couleur de la barre des encadrés, `#FF6B1A` |
 | `…banner_url`, `formation.image_url` | adresses des images (dossier `public/`). Laisse `""` pour ne pas afficher d'image. |
+| `images_version` | numéro ajouté aux adresses (`?v=2`). **Augmente-le** (3, 4…) quand tu remplaces une image par une nouvelle version, puis redéploie et republie |
+| `annonce.images` | les choix de l'option `image` de `/annonce` (nom affiché + bannière). `default_image` = choix par défaut |
 | `infos.channels` | pour chaque salon : identifiant (`"id"`), emoji, description |
 | `reglement.rules` | une règle par ligne, numérotation automatique |
 | `tickets.questions_channel_id` | identifiant du salon questions (remplace `{salon_questions}` dans le texte des tickets) |
 | `tickets.categories` | `value` = code interne (sans espace ni accent, ne pas changer après publication), `label` = texte affiché |
 | `formation.prix`, `formation.lien` | prix et lien de la formation (le bouton ouvre `lien`) |
-| `outils.tools` | pour chaque outil : `name`, `description`, `url` (10 outils maximum) |
+| `outils.tools` | pour chaque outil : `name`, `description`, `url` (15 outils maximum) |
 | `faq.questions` | pour chaque question : `question`, `answer` (15 maximum) |
 | `autopilot.lien_autopilot` | lien du bouton Nova Autopilot |
 
 Les liens doivent commencer par `https://`, sinon le bot affiche une erreur claire au lieu de publier.
 
-Dans les textes : `**gras**`, `## grand titre`, `### titre`, `-# petit texte gris`, et `\n` pour aller à la ligne.
+Dans les textes des encadrés : `**gras**`, `*italique*`, listes avec `- `, et `\n` pour aller à la ligne. Le titre d'un encadré (`title`) n'accepte pas la mise en forme. Limites de Discord : 256 caractères pour le titre, 4096 pour le texte (6000 en tout par message) ; le bot t'avertit si c'est trop long.
 
 ### Images du dossier public
 
-Le dossier `public/` doit contenir ces 8 fichiers (noms exacts, en minuscules) :
+Le dossier `public/` doit contenir ces 9 fichiers (noms exacts, en minuscules) :
 
 ```
 banniere-tickets.gif      banniere-formation.gif   banniere-autopilot.gif
 banniere-reglement.gif    banniere-outils.gif      decouverte-formation.png
-banniere-informations.gif banniere-faq.gif
+banniere-informations.gif banniere-faq.gif         banniere-annonce.gif
 ```
 
 - Vérifie-les avant de déployer : `npm run check-images -- --local` (présence, vrai GIF **animé**, poids).
 - Après le déploiement : `npm run check-images` télécharge chaque adresse en ligne et refait les mêmes contrôles.
 - Vise **moins de 10 Mo** par GIF pour un affichage rapide dans Discord (maximum absolu : 25 Mo chez Cloudflare).
-- Pour **remplacer** une image déjà publiée, donne-lui un nouveau nom (ex. `banniere-tickets-v2.gif`) et change l'adresse dans `config.json` : Discord garde l'ancienne en cache.
+- Pour **remplacer** une image : copie la nouvelle dans `public/` (même nom), **augmente `images_version`** dans `config.json` (ex. `"3"`), redéploie, puis republie le panneau. Discord garde les images en cache d'après leur adresse : sans nouveau numéro, tu pourrais revoir l'ancienne.
 - Les images doivent aussi être envoyées sur GitHub (dossier `public/`) si tu utilises le déploiement automatique, sinon l'Action s'arrête avec « fichier introuvable » (c'est voulu : elle ferait disparaître les images du site).
 
 Attention à garder des guillemets droits `"` et des virgules entre les éléments. En cas de doute, colle le fichier sur <https://jsonlint.com> pour le vérifier.
 
 Puis redéploie : `npx wrangler deploy` (ou pousse sur GitHub, étape 17).
 Les panneaux déjà publiés ne changent pas : relance la commande `/panel-…` et supprime l'ancien message.
+
+### Les pings d'annonce
+
+`/annonce` propose l'option `ping` : **Aucun**, **@everyone** ou **Un rôle** (avec l'option `role` pour choisir lequel ; si tu renseignes seulement `role`, ce rôle est mentionné).
+Le bot demande à Discord de mentionner uniquement la cible choisie. Mais **Discord n'envoie la notification que si le bot a le droit de la déclencher** :
+
+- pour `@everyone`, ou pour un rôle non mentionnable : le bot doit avoir la permission **« Mentionner @everyone, @here et tous les rôles »** ;
+- sinon, rends le rôle visé **mentionnable** (Paramètres du serveur > Rôles > le rôle > « Autoriser tout le monde à @mentionner ce rôle »).
+
+Cette permission **n'est pas** dans le lien d'invitation (permissions minimales) : ajoute-la toi-même au rôle du bot seulement si tu veux utiliser `@everyone`.
+Sans elle, l'annonce est publiée normalement mais personne n'est notifié ; le message de confirmation te le rappelle.
 
 ## 17. Déploiement automatique depuis GitHub
 
@@ -375,7 +395,8 @@ Autres limites à connaître :
 | Le ticket ne se crée pas | Vérifie `TICKET_CATEGORY_ID` et que le bot voit la catégorie avec « Gérer les salons ». |
 | La transcription n'arrive pas | Vérifie `LOG_CHANNEL_ID` et que le bot peut voir, écrire et joindre des fichiers dans ce salon. Le ticket n'est pas supprimé tant que la transcription n'est pas envoyée. |
 | Les commandes n'apparaissent pas | `npm run register`, puis redémarre Discord (Ctrl+R). |
-| La bannière n'apparaît pas ou ne bouge pas | `npm run check-images`. Ouvre l'adresse dans le navigateur : elle doit afficher le GIF animé. Si tu as remplacé l'image, change son nom (cache de Discord). |
+| La bannière n'apparaît pas ou ne bouge pas | `npm run check-images`. Ouvre l'adresse dans le navigateur : elle doit afficher le GIF animé. Si tu as remplacé l'image, augmente `images_version` dans `config.json` (cache de Discord), redéploie et republie. Un GIF ne s'anime pas si Discord est réglé sur « Ne jamais lire les GIF » (Paramètres > Accessibilité). |
+| `/annonce` : « Si personne n'a été notifié » | Voir [les pings d'annonce](#les-pings-de-annonce). |
 | « Ce panneau a été mis à jour » en cliquant sur un ancien bouton | Republie `/panel-tickets` et supprime l'ancien message. |
 | Le token a fuité | Portail développeur > Bot > Reset Token, puis mets à jour `.env` et `npx wrangler secret put DISCORD_TOKEN`. |
 
@@ -391,7 +412,8 @@ nova-club-bot/
 │   ├── index.js             ← réception et tri des interactions
 │   ├── verify.js            ← vérification de la signature Discord
 │   ├── discord.js           ← appels à l'API Discord, messages d'erreur
-│   ├── panels.js            ← les sept panneaux
+│   ├── panels.js            ← les panneaux (un encadré chacun)
+│   ├── annonce.js           ← la commande /annonce (formulaire)
 │   ├── tickets.js           ← ouverture, prise en charge, fermeture, transcription
 │   └── commands.js          ← définition des commandes slash
 ├── scripts/
@@ -401,9 +423,9 @@ nova-club-bot/
 └── test/worker.test.js      ← npm test (Discord simulé)
 ```
 
-## Mise à jour : panneaux animés
+## Mise à jour : nouvelle mise en page et /annonce
 
-Pour un bot **déjà installé et déployé**, voici comment passer à cette version.
+Pour un bot **déjà installé et déployé** (version avec bannières séparées), voici comment passer à cette version.
 
 ### 1. Fichiers à copier depuis le ZIP de la branche
 
@@ -411,27 +433,29 @@ Télécharge le ZIP, décompresse-le, puis copie **depuis `nova-club-bot/` du ZI
 
 | Copier (remplacer) | |
 |---|---|
-| `src/` (tout le dossier) | code du bot |
-| `scripts/` (tout le dossier) | dont le nouveau `check-images.js` |
+| `src/` (tout le dossier) | code du bot (nouveau fichier `annonce.js`) |
+| `scripts/` (tout le dossier) | |
 | `test/` (tout le dossier) | tests |
-| `config.json` | nouveaux panneaux ; ta couleur `#FF6B1A` et ton salon règlement sont déjà dedans |
-| `wrangler.toml` | ajoute les images ; ton id KV `a693b127…` est déjà dedans |
-| `package.json`, `package-lock.json` | nouvelle commande `check-images` |
+| `config.json` | nouveaux textes et `/annonce` ; ta couleur `#FF6B1A` et ton salon règlement sont déjà dedans |
+| `package.json`, `package-lock.json` | |
 | `README.md` | ce guide |
-| `public/` (dossier) | contient `LISEZMOI.txt` et `.assetsignore` |
 | `.github/workflows/deploy-nova-club-bot.yml` (à la **racine** du ZIP) | seulement si tu utilises le déploiement automatique |
 
 | Garder (ne pas toucher) | |
 |---|---|
 | `.env` | tes secrets locaux (token, identifiants) |
-| `node_modules/` | se met à jour avec `npm install` |
-| `.wrangler/` (s'il existe) | fichiers temporaires de wrangler |
+| `wrangler.toml` | déjà à jour chez toi (id KV `a693b127…`, dossier `public`). Rien à recopier |
+| `public/` | **ne copie pas ce dossier** : tu y mets tes propres images (étape 2) |
+| `node_modules/`, `.wrangler/` | se gèrent tout seuls |
 
-Si tu avais modifié d'autres textes dans ton ancien `config.json` (règlement, catégories…), recopie-les dans le nouveau.
+Si tu avais modifié d'autres textes dans ton ancien `config.json` (règlement, catégories, salon questions, prix, liens…), recopie-les dans le nouveau `config.json`.
 
-### 2. Déplacer les images
+### 2. Mettre les nouvelles images dans public/
 
-Déplace les 8 images (7 bannières `.gif` + `decouverte-formation.png`) de la racine de `nova-club-bot/` **dans `nova-club-bot/public/`**.
+Copie tes **9 nouveaux fichiers** (8 bannières `.gif` : tickets, reglement, informations, formation, outils, faq, autopilot, **annonce**, plus `decouverte-formation.png`)
+**dans `nova-club-bot/public/`**, en remplaçant les anciens du même nom. Les noms doivent être exactement ceux-là, en minuscules.
+
+Le réglage `images_version` (déjà à `"2"` dans le nouveau `config.json`) force Discord à charger les nouvelles images au lieu des anciennes en cache.
 
 ### 3. Remplacer les valeurs d'exemple dans config.json
 
@@ -450,16 +474,16 @@ npm run check-images
 npm run register
 ```
 
-- `npm install` installe la nouvelle version des dépendances.
+- `npm install` met à jour les dépendances.
 - `npm test` doit afficher `fail 0`.
-- `npm run check-images -- --local` doit afficher « Toutes les images sont prêtes ».
-- `npx wrangler deploy` publie le code et les images (la ligne « Read … files from the assets directory » doit compter tes images).
-- `npm run check-images` vérifie les images en ligne.
-- `npm run register` doit afficher « 7 commandes enregistrées ».
+- `npm run check-images -- --local` doit afficher « Toutes les images sont prêtes » (vérifie que les GIF sont animés).
+- `npx wrangler deploy` publie le code et les images.
+- `npm run check-images` vérifie les adresses en ligne.
+- `npm run register` doit afficher « 8 commandes enregistrées » (la nouvelle est `/annonce`). Si Discord ne l'affiche pas tout de suite, redémarre-le avec Ctrl+R.
 
 Les secrets Cloudflare n'ont pas changé : pas besoin de relancer `npm run secrets`.
 
 ### 5. Republier les panneaux
 
-Les anciens messages ne changent pas tout seuls. Publie les nouveaux panneaux (`/panel-infos`, `/panel-reglement`, `/panel-tickets`, puis les 4 nouveaux) et supprime les anciens messages.
-L'ancien bouton « Ouvrir un ticket » renvoie simplement vers le menu ; l'ancien menu crée directement le ticket.
+Les anciens messages ne changent pas tout seuls. Relance `/panel-infos`, `/panel-reglement`, `/panel-tickets`, `/panel-formation`, `/panel-outils`, `/panel-faq` et `/panel-autopilot`, puis supprime les anciens messages.
+Les anciens panneaux restent utilisables : l'ancien bouton « Ouvrir un ticket » renvoie vers le menu, et l'ancien menu crée directement le ticket.

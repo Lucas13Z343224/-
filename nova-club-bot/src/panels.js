@@ -1,23 +1,30 @@
-// Construction des panneaux publiés par les commandes /panel-*.
-// Mise en page « composants V2 » de Discord : la bannière (GIF animé) en grande image
-// tout en haut, puis un encadré (conteneur) avec la barre de couleur sur le côté.
+// Construction des panneaux publiés par les commandes /panel-* et /annonce.
+// Mise en page : UN message avec UN encadré (embed) : titre, texte en sections,
+// bannière animée en bas de l'encadré (embed.image), barre de couleur sur le côté.
+// Le menu déroulant ou les boutons sont placés sous le message.
 import config from "../config.json" with { type: "json" };
 import { COLOR, UserError, fill } from "./discord.js";
 
-export const IS_COMPONENTS_V2 = 1 << 15;
-const MAX_COMPONENTS = 40; // limite Discord par message
-
 const SNOWFLAKE = /^\d{17,20}$/;
+const EMBED_DESCRIPTION_MAX = 4096;
+const EMBED_TITLE_MAX = 256;
+const EMBED_TOTAL_MAX = 6000;
 
-// ── Briques de mise en page ──────────────────────────────────────────────────
-const text = (content) => ({ type: 10, content });
-const separator = () => ({ type: 14, divider: true, spacing: 1 });
-const row = (...components) => ({ type: 1, components });
-const container = (...components) => ({ type: 17, accent_color: COLOR, components });
-const gallery = (url, description) => ({ type: 12, items: [{ media: { url }, description: description || undefined }] });
+const IS_ANIMATED_EMBED = 1 << 5; // drapeau « image animée » des images d'encadré
+
 const emoji = (e) => (e ? { name: e } : undefined);
+const row = (...components) => ({ type: 1, components });
 const linkButton = (label, url, e) => ({ type: 2, style: 5, label, url, emoji: emoji(e) });
-const footer = () => text(`-# ${config.footer}`);
+
+// Ajoute ?v=<images_version> aux adresses d'images : Discord garde les images en cache
+// d'après leur adresse, ce numéro force le rechargement d'une image remplacée.
+export function imageUrl(url) {
+  if (!url) return "";
+  checkUrl(url, "banner_url");
+  const version = String(config.images_version ?? "").trim();
+  if (!version || url.includes("?")) return url;
+  return `${url}?v=${encodeURIComponent(version)}`;
+}
 
 function checkUrl(value, field) {
   let ok = false;
@@ -41,20 +48,32 @@ function checkMax(list, field, max) {
   if (list.length > max) throw new UserError(fill(config.errors.too_many_items, { field, max }));
 }
 
-function countComponents(components) {
-  return components.reduce(
-    (n, c) => n + 1 + countComponents(c.components ?? []) + (c.accessory ? 1 : 0),
-    0,
-  );
+// Un encadré : titre, description (sections de texte), bannière en bas, barre de couleur.
+export function embed({ title, description, image }) {
+  const e = { title, description, color: COLOR };
+  if (image) e.image = { url: imageUrl(image) };
+  return e;
 }
 
-// Bannière en haut (si une adresse est définie) puis le reste du message.
-function message(bannerUrl, bannerField, ...components) {
-  const all = bannerUrl ? [gallery(checkUrl(bannerUrl, bannerField)), ...components] : components;
-  if (countComponents(all) > MAX_COMPONENTS) {
-    throw new UserError(fill(config.errors.too_many_items, { field: "composants", max: MAX_COMPONENTS }));
+// Sections de texte séparées par une ligne vide. Un titre de section s'écrit en gras.
+const section = (heading, body) => (heading ? `**${heading}**\n${body}` : body);
+const join = (...parts) => parts.filter(Boolean).join("\n\n");
+
+// Vérifie les limites de Discord avant l'envoi, avec un message clair.
+function message(embeds, components) {
+  for (const e of embeds) {
+    if ((e.title ?? "").length > EMBED_TITLE_MAX) {
+      throw new UserError(fill(config.errors.embed_too_long, { max: EMBED_TITLE_MAX, size: e.title.length }));
+    }
+    if ((e.description ?? "").length > EMBED_DESCRIPTION_MAX) {
+      throw new UserError(fill(config.errors.embed_too_long, { max: EMBED_DESCRIPTION_MAX, size: e.description.length }));
+    }
   }
-  return { flags: IS_COMPONENTS_V2, components: all, allowed_mentions: { parse: [] } };
+  const total = embeds.reduce((n, e) => n + (e.title ?? "").length + (e.description ?? "").length, 0);
+  if (total > EMBED_TOTAL_MAX) throw new UserError(fill(config.errors.embed_too_long, { max: EMBED_TOTAL_MAX, size: total }));
+  const msg = { embeds, allowed_mentions: { parse: [] } };
+  if (components?.length) msg.components = components;
+  return msg;
 }
 
 // ── Panneaux ────────────────────────────────────────────────────────────────
@@ -62,55 +81,59 @@ export function infosPanel() {
   const c = config.infos;
   checkChannelIds(c.channels.map((ch) => ch.id));
   const list = c.channels.map((ch) => `${ch.emoji ?? "•"} <#${ch.id}> — ${ch.description}`).join("\n");
-  return message(
-    c.banner_url,
-    "infos.banner_url",
-    container(text(`## ${c.title}\n${c.welcome}`), separator(), text(`### ${c.channels_title}\n${list}`), footer()),
-  );
+  return message([
+    embed({ title: c.title, description: join(c.welcome, section(c.channels_title, list)), image: c.banner_url }),
+  ]);
 }
 
 export function reglementPanel() {
   const r = config.reglement;
   const rules = r.rules.map((rule, i) => `**${i + 1}.** ${rule}`).join("\n");
   return message(
-    r.banner_url,
-    "reglement.banner_url",
-    container(
-      text(`## ${r.title}\n${r.intro}`),
-      separator(),
-      text(rules),
-      separator(),
-      text(r.outro),
-      row({ type: 2, style: 3, custom_id: "rules:accept", label: r.button_label, emoji: emoji(r.button_emoji) }),
-      footer(),
-    ),
+    [
+      embed({
+        title: r.title,
+        description: join(r.intro, section(r.rules_title, rules), section(r.outro_title, r.outro)),
+        image: r.banner_url,
+      }),
+    ],
+    [row({ type: 2, style: 3, custom_id: "rules:accept", label: r.button_label, emoji: emoji(r.button_emoji) })],
   );
+}
+
+// Menu déroulant des tickets (aussi utilisé pour le « vider » après un choix).
+export function ticketSelectRow() {
+  const t = config.tickets;
+  return row({
+    type: 3,
+    custom_id: "ticket:create",
+    placeholder: t.select_placeholder,
+    min_values: 1,
+    max_values: 1,
+    options: t.categories.map((cat) => ({
+      value: cat.value,
+      label: cat.label,
+      description: cat.description || undefined,
+      emoji: emoji(cat.emoji),
+    })),
+  });
 }
 
 export function ticketsPanel() {
   const t = config.tickets;
   checkChannelIds([t.questions_channel_id]);
+  const categories = t.categories
+    .map((cat) => `${cat.emoji ?? "•"} **${cat.label}**${cat.description ? ` — ${cat.description}` : ""}`)
+    .join("\n");
   return message(
-    t.banner_url,
-    "tickets.banner_url",
-    container(
-      text(`## ${t.panel_title}\n${fill(t.panel_description, { salon_questions: `<#${t.questions_channel_id}>` })}`),
-      separator(),
-      row({
-        type: 3, // menu déroulant : choisir une raison crée directement le ticket
-        custom_id: "ticket:create",
-        placeholder: t.select_placeholder,
-        min_values: 1,
-        max_values: 1,
-        options: t.categories.map((cat) => ({
-          value: cat.value,
-          label: cat.label,
-          description: cat.description || undefined,
-          emoji: emoji(cat.emoji),
-        })),
+    [
+      embed({
+        title: t.panel_title,
+        description: fill(t.panel_description, { categories, salon_questions: `<#${t.questions_channel_id}>` }),
+        image: t.banner_url,
       }),
-      footer(),
-    ),
+    ],
+    [ticketSelectRow()],
   );
 }
 
@@ -119,65 +142,58 @@ export function formationPanel() {
   const lien = checkUrl(f.lien, "formation.lien");
   const vars = { prix: f.prix, lien };
   const points = f.points.map((p) => `• ${p}`).join("\n");
-  const parts = [
-    container(
-      text(`## ${f.title}\n${fill(f.description, vars)}`),
-      separator(),
-      text(points),
-      separator(),
-      text(fill(f.details, vars)),
-    ),
+  const embeds = [
+    embed({
+      title: f.title,
+      description: join(fill(f.description, vars), section(f.points_title, points), section(f.details_title, fill(f.details, vars))),
+      image: f.banner_url,
+    }),
   ];
-  if (f.image_url) parts.push(gallery(checkUrl(f.image_url, "formation.image_url")));
-  parts.push(row(linkButton(f.button_label, lien, f.button_emoji)));
-  return message(f.banner_url, "formation.banner_url", ...parts);
+  // Deuxième encadré : l'image de présentation en grande image.
+  if (f.image_url) embeds.push({ color: COLOR, image: { url: imageUrl(f.image_url) } });
+  return message(embeds, [row(linkButton(f.button_label, lien, f.button_emoji))]);
 }
 
 export function outilsPanel() {
   const o = config.outils;
-  checkMax(o.tools, "outils.tools", 10);
-  const tools = o.tools.flatMap((tool, i) => [
-    ...(i ? [separator()] : []),
-    {
-      type: 9, // section : texte + bouton « Ouvrir » à droite
-      components: [text(`**${tool.name}**\n${tool.description}`)],
-      accessory: linkButton(o.button_label, checkUrl(tool.url, `outils.tools[${i}].url`)),
-    },
-  ]);
-  return message(
-    o.banner_url,
-    "outils.banner_url",
-    container(text(`## ${o.title}\n${o.intro}`), separator(), ...tools, footer()),
-  );
+  checkMax(o.tools, "outils.tools", 15);
+  const tools = o.tools
+    .map((tool, i) => `🔹 **${tool.name}**\n${tool.description}\n[${o.link_label} →](${checkUrl(tool.url, `outils.tools[${i}].url`)})`)
+    .join("\n\n");
+  return message([embed({ title: o.title, description: join(o.intro, tools), image: o.banner_url })]);
 }
 
 export function faqPanel() {
   const q = config.faq;
   checkMax(q.questions, "faq.questions", 15);
-  return message(
-    q.banner_url,
-    "faq.banner_url",
-    text(`## ${q.title}`),
-    // un petit encadré par question
-    ...q.questions.map((item) => container(text(`### ${item.question}\n${item.answer}`))),
-  );
+  const body = q.questions.map((item) => section(`${q.question_emoji} ${item.question}`, item.answer)).join("\n\n");
+  return message([embed({ title: q.title, description: body, image: q.banner_url })]);
 }
 
 export function autopilotPanel() {
   const a = config.autopilot;
   const lien = checkUrl(a.lien_autopilot, "autopilot.lien_autopilot");
+  const features = a.features.map((f) => `• ${f}`).join("\n");
   return message(
-    a.banner_url,
-    "autopilot.banner_url",
-    container(
-      text(`## ${a.title}\n${a.description}`),
-      separator(),
-      text(a.features.map((f) => `• ${f}`).join("\n")),
-      separator(),
-      text(`-# ${a.disclaimer}`),
-      row(linkButton(a.button_label, lien, a.button_emoji)),
-    ),
+    [
+      embed({
+        title: a.title,
+        description: join(a.description, section(a.features_title, features), `*${a.disclaimer}*`),
+        image: a.banner_url,
+      }),
+    ],
+    [row(linkButton(a.button_label, lien, a.button_emoji))],
   );
+}
+
+// ── Annonce (/annonce) ──────────────────────────────────────────────────────
+export function annonceImages() {
+  return config.annonce.images;
+}
+
+export function annoncePanel({ title, text, imageValue }) {
+  const choice = annonceImages().find((i) => i.value === imageValue) ?? annonceImages().find((i) => i.value === config.annonce.default_image);
+  return message([embed({ title, description: text, image: choice?.banner_url })]);
 }
 
 export const PANELS = {
@@ -190,20 +206,14 @@ export const PANELS = {
   "panel-autopilot": { build: autopilotPanel, published: () => config.autopilot.published },
 };
 
-// Vérifie, dans la réponse de Discord, que les images ont bien été chargées.
-// Discord remplit content_type et le drapeau IS_ANIMATED (1 << 0) des médias qu'il a lus.
+// Vérifie, dans la réponse de Discord, comment les images des encadrés ont été lues.
 export function mediaReport(sentMessage) {
-  const items = [];
-  const walk = (list) => {
-    for (const c of list ?? []) {
-      if (c.type === 12) items.push(...c.items.map((i) => i.media));
-      walk(c.components);
-    }
-  };
-  walk(sentMessage?.components);
-  return items.map((m) => ({
-    url: m.url,
-    contentType: m.content_type ?? null,
-    animated: Boolean((m.flags ?? 0) & 1),
-  }));
+  return (sentMessage?.embeds ?? [])
+    .filter((e) => e.image)
+    .map((e) => ({
+      url: e.image.url,
+      contentType: e.image.content_type ?? null,
+      known: e.image.width != null || e.image.content_type != null,
+      animated: Boolean((e.image.flags ?? 0) & IS_ANIMATED_EMBED),
+    }));
 }

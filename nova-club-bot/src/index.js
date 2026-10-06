@@ -17,7 +17,8 @@ import {
   isAdmin,
   userOf,
 } from "./discord.js";
-import { IS_COMPONENTS_V2, PANELS, mediaReport, ticketsPanel } from "./panels.js";
+import { annonceFromSubmit, annonceModal, annonceSummary, isAnnonceModal } from "./annonce.js";
+import { PANELS, mediaReport, ticketSelectRow } from "./panels.js";
 import { askCloseConfirmation, cancelClose, claimTicket, closeTicket, openTicket } from "./tickets.js";
 import { verifyDiscordRequest } from "./verify.js";
 
@@ -82,6 +83,7 @@ function mediaLines(sentMessage) {
   return mediaReport(sentMessage).map((item) => {
     const file = decodeURIComponent(item.url.split("/").pop().split("?")[0]);
     if (item.animated) return fill(m.animated, { file });
+    if (item.contentType === "image/gif") return fill(m.gif_unconfirmed, { file });
     if (item.contentType?.startsWith("image/")) return fill(m.image_ok, { file });
     if (item.contentType) return fill(m.not_image, { file, type: item.contentType });
     return fill(m.pending, { file });
@@ -89,6 +91,15 @@ function mediaLines(sentMessage) {
 }
 
 async function handleCommand(interaction, env, ctx) {
+  if (interaction.data.name === "annonce") {
+    if (!isAdmin(interaction.member)) return ephemeral(config.errors.admin_only);
+    try {
+      return annonceModal(interaction);
+    } catch (err) {
+      if (err instanceof UserError) return ephemeral(err.message);
+      throw err;
+    }
+  }
   const panel = PANELS[interaction.data.name];
   if (!panel) return ephemeral(config.errors.unknown_action);
   if (!isAdmin(interaction.member)) return ephemeral(config.errors.admin_only);
@@ -99,6 +110,19 @@ async function handleCommand(interaction, env, ctx) {
     const lines = [fill(panel.published(), { channel: `<#${channelId}>` }), ...mediaLines(sent)];
     await ready;
     await editOriginal(interaction, { content: lines.join("\n") });
+  });
+  return deferredEphemeral();
+}
+
+// Le formulaire de /annonce a été envoyé : publication de l'encadré.
+function handleModalSubmit(interaction, env, ctx) {
+  if (!isAnnonceModal(interaction.data.custom_id)) return ephemeral(config.errors.unknown_action);
+  if (!isAdmin(interaction.member)) return ephemeral(config.errors.admin_only);
+  runDeferred(ctx, interaction, async (ready) => {
+    const { channelId, body, ping } = annonceFromSubmit(interaction);
+    const sent = await discord(env, "POST", `/channels/${channelId}/messages`, { body });
+    await ready;
+    await editOriginal(interaction, { content: [...annonceSummary(channelId, ping), ...mediaLines(sent)].join("\n") });
   });
   return deferredEphemeral();
 }
@@ -119,20 +143,18 @@ function acceptRules(interaction, env, ctx) {
   return deferredEphemeral();
 }
 
+const LEGACY_V2_FLAG = 1 << 15;
+
 // Choisir une raison dans le menu crée directement le ticket.
 function createTicketFromMenu(interaction, env, ctx) {
   const category = interaction.data.values?.[0];
   if (!config.tickets.categories.some((c) => c.value === category)) return ephemeral(config.errors.unknown_category);
   runWithFollowUp(ctx, interaction, () => openTicket(interaction, env, category));
 
-  // On republie le même panneau pour vider le menu : la personne pourra rechoisir plus tard.
-  if ((interaction.message?.flags ?? 0) & IS_COMPONENTS_V2) {
-    try {
-      const { components } = ticketsPanel();
-      return { type: ResponseType.UPDATE_MESSAGE, data: { components } };
-    } catch {
-      // config.json invalide : on ne touche pas au panneau.
-    }
+  // On remet le menu à zéro (sans choix sélectionné) pour que la personne puisse rechoisir plus tard.
+  // Les panneaux de l'ancienne mise en page (drapeau 1 << 15) ne se modifient pas ainsi : on les laisse tels quels.
+  if (!((interaction.message?.flags ?? 0) & LEGACY_V2_FLAG)) {
+    return { type: ResponseType.UPDATE_MESSAGE, data: { components: [ticketSelectRow()] } };
   }
   return { type: ResponseType.DEFERRED_UPDATE_MESSAGE };
 }
@@ -195,6 +217,7 @@ export default {
     try {
       if (interaction.type === InteractionType.APPLICATION_COMMAND) return json(await handleCommand(interaction, env, ctx));
       if (interaction.type === InteractionType.MESSAGE_COMPONENT) return json(handleComponent(interaction, env, ctx));
+      if (interaction.type === InteractionType.MODAL_SUBMIT) return json(handleModalSubmit(interaction, env, ctx));
       return json(ephemeral(config.errors.unknown_action));
     } catch (err) {
       console.error(err);

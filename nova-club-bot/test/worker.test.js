@@ -75,13 +75,35 @@ const member = { user: USER, roles: [], permissions: "0" };
 const staffMember = { user: STAFF, roles: ["600000000000000006"], permissions: "0" };
 const originalEdit = () => calls.find((c) => c.method === "PATCH" && c.url.includes("@original"));
 const followUps = () => calls.filter((c) => c.method === "POST" && /\/webhooks\/\d+\/tok$/.test(c.url)).map((c) => JSON.parse(c.body));
-const V2 = 1 << 15;
-const flat = (list) => list.flatMap((c) => [c, ...flat(c.components ?? []), ...(c.accessory ? [c.accessory] : [])]);
-async function publish(name) {
+const V2 = 1 << 15; // ancienne mise en page (composants V2)
+const ORANGE = 0xff6b1a;
+async function publish(name, extra = []) {
   calls = [];
-  await send({ type: 2, member: admin, channel_id: "1", data: { name, options: [{ name: "salon", type: 7, value: "999000000000000000" }] } });
+  await send({ type: 2, member: admin, channel_id: "1", data: { name, options: [{ name: "salon", type: 7, value: "999000000000000000" }, ...extra] } });
   const post = calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/999000000000000000/messages"));
   return { body: post && JSON.parse(post.body), edit: JSON.parse(originalEdit().body).content };
+}
+const withQuestionsChannel = async (fn) => {
+  const config = (await import("../config.json", { with: { type: "json" } })).default;
+  config.tickets.questions_channel_id = "123456789012345678";
+  try {
+    return await fn(config);
+  } finally {
+    config.tickets.questions_channel_id = "REMPLACE_PAR_ID_SALON_QUESTIONS";
+  }
+};
+const buttons = (body) => (body.components ?? []).flatMap((r) => r.components);
+// Mise en page commune : un seul message, un seul encadré, bannière en bas, barre orange, pas de composants V2.
+function assertLayout(body, banner, title) {
+  assert.equal(body.flags, undefined);
+  assert.equal(body.content, undefined);
+  assert.equal(body.embeds.length, 1);
+  const e = body.embeds[0];
+  assert.equal(e.title, title);
+  assert.equal(e.color, ORANGE);
+  assert.match(e.image.url, new RegExp(`/${banner}\\.gif\\?v=2$`));
+  assert.match(e.image.url, /^https:\/\/nova-club-bot\.novaclub\.workers\.dev\//);
+  return e;
 }
 
 test("répond au PING de Discord", async () => {
@@ -100,32 +122,38 @@ test("/panel-tickets refusé pour un non-administrateur", async () => {
   assert.equal(calls.length, 0);
 });
 
-test("/panel-reglement publie le règlement dans le salon choisi", async () => {
-  const r = await send({
-    type: 2,
-    member: admin,
-    channel_id: "1",
-    data: { name: "panel-reglement", options: [{ name: "salon", type: 7, value: "999000000000000000" }] },
-  });
-  assert.equal(r.data.type, 5);
-  const post = calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/999000000000000000/messages"));
-  const body = JSON.parse(post.body);
-  assert.equal(body.flags, V2);
-  // Bannière animée en premier, puis l'encadré orange
-  assert.equal(body.components[0].type, 12);
-  assert.match(body.components[0].items[0].media.url, /banniere-reglement\.gif$/);
-  assert.equal(body.components[1].type, 17);
-  assert.equal(body.components[1].accent_color, 0xff6b1a);
-  const all = flat(body.components);
-  assert.ok(all.some((c) => c.custom_id === "rules:accept"));
-  assert.ok(all.some((c) => c.type === 10 && /\*\*1\.\*\*/.test(c.content)));
-  assert.match(JSON.parse(originalEdit().body).content, /publié/);
+test("/panel-reglement : titre, règles numérotées, bannière en bas, bouton sous le message", async () => {
+  const { body, edit } = await publish("panel-reglement");
+  const e = assertLayout(body, "banniere-reglement", "📜 Règlement du serveur");
+  assert.match(e.description, /\*\*1\.\*\*/);
+  assert.match(e.description, /\*\*6\.\*\*/);
+  assert.equal(buttons(body)[0].custom_id, "rules:accept");
+  assert.equal(buttons(body)[0].label, "J'ai lu et j'accepte");
+  assert.match(edit, /publié/);
 });
 
-test("/panel-infos : bannière puis salons cliquables", async () => {
+test("/panel-infos : titre et salons cliquables (réglages conservés)", async () => {
   const { body } = await publish("panel-infos");
-  assert.match(body.components[0].items[0].media.url, /banniere-informations\.gif$/);
-  assert.ok(flat(body.components).some((c) => c.type === 10 && c.content.includes("<#1556574078197047296>")));
+  const e = assertLayout(body, "banniere-informations", "📌 Informations");
+  assert.ok(e.description.includes("📜 <#1556574078197047296> — Le règlement à lire et accepter pour accéder au serveur."));
+  assert.equal(body.components, undefined);
+});
+
+test("/panel-tickets : liste des catégories, consigne, menu sans bouton", async () => {
+  await withQuestionsChannel(async () => {
+    const { body } = await publish("panel-tickets");
+    const e = assertLayout(body, "banniere-tickets", "🎫 Support — Nova Club");
+    for (const label of ["Support", "Problème d'accès", "Question sur la formation", "Autre"]) assert.ok(e.description.includes(`**${label}**`), label);
+    assert.ok(e.description.includes("⚠️"));
+    assert.ok(e.description.includes("<#123456789012345678>"));
+    assert.equal(body.components.length, 1);
+    const menu = body.components[0].components[0];
+    assert.equal(menu.type, 3);
+    assert.equal(menu.custom_id, "ticket:create");
+    assert.equal(menu.placeholder, "Sélectionne la raison de ton ticket");
+    assert.equal(menu.options.length, 4);
+    assert.ok(!buttons(body).some((b) => b.type === 2)); // plus de bouton « Ouvrir un ticket »
+  });
 });
 
 test("/panel-tickets signale l'identifiant du salon questions à remplacer", async () => {
@@ -134,69 +162,203 @@ test("/panel-tickets signale l'identifiant du salon questions à remplacer", asy
   assert.match(edit, /REMPLACE_PAR_ID_SALON_QUESTIONS/);
 });
 
-test("/panel-formation : bannière, encadré avec prix et lien, image, bouton lien", async () => {
+test("/panel-formation : encadré avec prix et lien, 2e encadré image, bouton lien", async () => {
   const { body } = await publish("panel-formation");
-  assert.equal(body.flags, V2);
-  const [banner, box, image, buttons] = body.components;
-  assert.match(banner.items[0].media.url, /banniere-formation\.gif$/);
-  assert.equal(box.type, 17);
-  const texts = flat([box]).filter((c) => c.type === 10).map((c) => c.content).join("\n");
-  assert.match(texts, /Formation dropshipping eBay & Etsy/);
-  assert.match(texts, /À REMPLACER \(ex\. 97 €\)/);
-  assert.match(texts, /https:\/\/exemple\.com\/a-remplacer-formation/);
-  assert.match(image.items[0].media.url, /decouverte-formation\.png$/);
-  assert.equal(buttons.components[0].style, 5);
-  assert.equal(buttons.components[0].url, "https://exemple.com/a-remplacer-formation");
-  assert.equal(buttons.components[0].emoji.name, "🚀");
+  assert.equal(body.embeds.length, 2);
+  const e = assertLayout({ ...body, embeds: [body.embeds[0]] }, "banniere-formation", "🎓 Formation dropshipping eBay & Etsy");
+  assert.match(e.description, /eBay\*\* et \*\*Etsy/);
+  assert.match(e.description, /communauté privée/);
+  assert.match(e.description, /Nova Autopilot/);
+  assert.match(e.description, /À REMPLACER \(ex\. 97 €\)/);
+  assert.match(e.description, /https:\/\/exemple\.com\/a-remplacer-formation/);
+  const second = body.embeds[1];
+  assert.equal(second.color, ORANGE);
+  assert.match(second.image.url, /decouverte-formation\.png\?v=2$/);
+  const [btn] = buttons(body);
+  assert.equal(btn.style, 5);
+  assert.equal(btn.label, "Découvrir la formation");
+  assert.equal(btn.emoji.name, "🚀");
+  assert.equal(btn.url, "https://exemple.com/a-remplacer-formation");
 });
 
-test("/panel-outils : une ligne par outil avec un bouton lien", async () => {
+test("/panel-outils : liste des outils avec liens, 3 exemples À REMPLACER", async () => {
   const { body } = await publish("panel-outils");
-  assert.match(body.components[0].items[0].media.url, /banniere-outils\.gif$/);
-  const sections = flat(body.components).filter((c) => c.type === 9);
-  assert.equal(sections.length, 3);
-  assert.ok(sections.every((s) => s.accessory.style === 5 && s.accessory.url.startsWith("https://")));
-  assert.match(sections[0].components[0].content, /À REMPLACER/);
+  const e = assertLayout(body, "banniere-outils", "🛠️ Outils pour ton business");
+  assert.equal(e.description.match(/À REMPLACER/g).length, 3);
+  assert.equal(e.description.match(/\]\(https:\/\/exemple\.com\/a-remplacer-outil-\d\)/g).length, 3);
 });
 
-test("/panel-faq : un petit encadré par question", async () => {
+test("/panel-faq : une section par question", async () => {
   const { body } = await publish("panel-faq");
-  assert.match(body.components[0].items[0].media.url, /banniere-faq\.gif$/);
-  const boxes = body.components.filter((c) => c.type === 17);
-  assert.equal(boxes.length, 4);
-  assert.match(boxes[3].components[0].content, /Chaque plateforme a ses propres règles/);
+  const e = assertLayout(body, "banniere-faq", "❓ FAQ");
+  for (const q of ["Qu'est-ce que le dropshipping ?", "Comment accéder à Nova Autopilot ?", "Comment ouvrir un ticket ?", "Est-ce autorisé par les plateformes ?"]) {
+    assert.ok(e.description.includes(`**💬 ${q}**`), q);
+  }
+  assert.ok(e.description.includes("Chaque plateforme a ses propres règles. Lis-les avant de vendre et ne vends que des produits que tu as le droit de vendre. L'équipe ne peut pas garantir les décisions des plateformes."));
 });
 
-test("/panel-autopilot : présentation et bouton lien", async () => {
+test("/panel-autopilot : présentation, bouton lien, aucune promesse de gains", async () => {
   const { body } = await publish("panel-autopilot");
-  assert.match(body.components[0].items[0].media.url, /banniere-autopilot\.gif$/);
-  const all = flat(body.components);
-  const texts = all.filter((c) => c.type === 10).map((c) => c.content).join("\n");
-  for (const word of ["produits", "Publication groupée", "Suivi des prix", "commandes", "Comptabilité"]) assert.match(texts, new RegExp(word));
-  assert.ok(all.some((c) => c.style === 5 && c.url === "https://exemple.com/a-remplacer-autopilot"));
+  const e = assertLayout(body, "banniere-autopilot", "🤖 Nova Autopilot");
+  for (const word of ["Trouver des produits", "Publication groupée", "Suivi des prix", "commandes", "Comptabilité"]) assert.match(e.description, new RegExp(word));
+  assert.match(e.description, /ne garantit aucun résultat ni aucun revenu/);
+  assert.equal(buttons(body)[0].url, "https://exemple.com/a-remplacer-autopilot");
+});
+
+test("une image remplacée change d'adresse quand images_version change", async () => {
+  const config = (await import("../config.json", { with: { type: "json" } })).default;
+  const { imageUrl } = await import("../src/panels.js");
+  const old = config.images_version;
+  config.images_version = "3";
+  assert.equal(imageUrl("https://x.example/a.gif"), "https://x.example/a.gif?v=3");
+  config.images_version = "";
+  assert.equal(imageUrl("https://x.example/a.gif"), "https://x.example/a.gif");
+  config.images_version = old;
 });
 
 test("la publication indique si Discord a reconnu le GIF animé", async () => {
   route("POST", /999000000000000000\/messages/, (call) => {
     const sent = JSON.parse(call.body);
-    sent.components[0].items[0].media = { url: sent.components[0].items[0].media.url, content_type: "image/gif", flags: 1 };
+    sent.embeds[0].image = { ...sent.embeds[0].image, content_type: "image/gif", width: 600, height: 200, flags: 1 << 5 };
     return jsonRes(sent);
   });
   const { edit } = await publish("panel-faq");
   assert.match(edit, /banniere-faq\.gif : GIF animé reconnu/);
 });
 
+test("un GIF reconnu mais non animé est signalé", async () => {
+  route("POST", /999000000000000000\/messages/, (call) => {
+    const sent = JSON.parse(call.body);
+    sent.embeds[0].image = { ...sent.embeds[0].image, content_type: "image/gif", width: 600, height: 200, flags: 0 };
+    return jsonRes(sent);
+  });
+  const { edit } = await publish("panel-faq");
+  assert.match(edit, /pas signalé comme animé/);
+});
+
 test("tous les panneaux respectent les limites de Discord", async () => {
-  const { PANELS } = await import("../src/panels.js");
+  await withQuestionsChannel(async () => {
+    const { PANELS } = await import("../src/panels.js");
+    for (const [name, panel] of Object.entries(PANELS)) {
+      const msg = panel.build();
+      assert.ok(msg.embeds.length <= 10, name);
+      let total = 0;
+      for (const e of msg.embeds) {
+        assert.ok((e.title ?? "").length <= 256, `${name} : titre trop long`);
+        assert.ok((e.description ?? "").length <= 4096, `${name} : description trop longue`);
+        total += (e.title ?? "").length + (e.description ?? "").length;
+      }
+      assert.ok(total <= 6000, `${name} : trop de texte`);
+      assert.ok((msg.components ?? []).length <= 5, name);
+    }
+  });
+});
+
+test("un texte trop long est refusé avec un message clair", async () => {
   const config = (await import("../config.json", { with: { type: "json" } })).default;
-  config.tickets.questions_channel_id = "123456789012345678";
-  for (const [name, panel] of Object.entries(PANELS)) {
-    const msg = panel.build();
-    assert.ok(flat(msg.components).length <= 40, `${name} : trop de composants`);
-    const chars = flat(msg.components).filter((c) => c.type === 10).reduce((n, c) => n + c.content.length, 0);
-    assert.ok(chars <= 4000, `${name} : trop de texte`);
+  const old = config.faq.questions[0].answer;
+  config.faq.questions[0].answer = "x".repeat(4100);
+  try {
+    const { edit, body } = await publish("panel-faq");
+    assert.equal(body, undefined);
+    assert.match(edit, /trop long pour Discord/);
+  } finally {
+    config.faq.questions[0].answer = old;
   }
-  config.tickets.questions_channel_id = "REMPLACE_PAR_ID_SALON_QUESTIONS";
+});
+
+test("/annonce : réservé aux administrateurs", async () => {
+  const r = await send({ type: 2, member, channel_id: "1", data: { name: "annonce" } });
+  assert.match(r.data.data.content, /administrateurs/);
+});
+
+test("/annonce : ouvre un formulaire Titre + Texte, sans texte d'exemple", async () => {
+  const r = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce" } });
+  assert.equal(r.data.type, 9);
+  const fields = r.data.data.components.map((c) => c.component);
+  assert.deepEqual(r.data.data.components.map((c) => c.label), ["Titre", "Texte"]);
+  assert.equal(fields[0].style, 1);
+  assert.equal(fields[1].style, 2);
+  assert.equal(fields[1].max_length, 4000);
+  assert.ok(fields.every((f) => f.required && !f.placeholder && !f.value));
+  assert.ok(r.data.data.custom_id.length <= 100);
+  assert.equal(calls.length, 0);
+});
+
+test("/annonce : ping sur un rôle sans rôle choisi → erreur claire", async () => {
+  const r = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce", options: [{ name: "ping", type: 3, value: "role" }] } });
+  assert.match(r.data.data.content, /option « role »/);
+});
+
+const submitAnnonce = (customId, titre, texte, who = admin) =>
+  send({
+    type: 5,
+    member: who,
+    channel_id: "1",
+    data: {
+      custom_id: customId,
+      components: [
+        { type: 18, id: 1, component: { type: 4, id: 2, custom_id: "titre", value: titre } },
+        { type: 18, id: 3, component: { type: 4, id: 4, custom_id: "texte", value: texte } },
+      ],
+    },
+  });
+
+test("/annonce : options → formulaire → publication (bannière par défaut, sans ping)", async () => {
+  const modal = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce", options: [{ name: "salon", type: 7, value: "999000000000000000" }] } });
+  calls = [];
+  const r = await submitAnnonce(modal.data.data.custom_id, "Titre de test", "**Gras** et une liste :\n- un\n- deux");
+  assert.equal(r.data.type, 5);
+  const post = calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/999000000000000000/messages"));
+  const body = JSON.parse(post.body);
+  const e = assertLayout(body, "banniere-annonce", "Titre de test");
+  assert.equal(e.description, "**Gras** et une liste :\n- un\n- deux");
+  assert.equal(body.content, undefined);
+  assert.deepEqual(body.allowed_mentions, { parse: [] });
+  assert.match(JSON.parse(originalEdit().body).content, /<#999000000000000000>/);
+});
+
+test("/annonce : salon par défaut = salon actuel, image choisie, @everyone", async () => {
+  const modal = await send({
+    type: 2, member: admin, channel_id: "1",
+    data: { name: "annonce", options: [{ name: "ping", type: 3, value: "everyone" }, { name: "image", type: 3, value: "outils" }] },
+  });
+  calls = [];
+  await submitAnnonce(modal.data.data.custom_id, "T", "Texte");
+  const post = calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages"));
+  const body = JSON.parse(post.body);
+  assert.match(body.embeds[0].image.url, /banniere-outils\.gif/);
+  assert.equal(body.content, "@everyone");
+  assert.deepEqual(body.allowed_mentions, { parse: ["everyone"] });
+  assert.match(JSON.parse(originalEdit().body).content, /Mentionner @everyone/);
+});
+
+test("/annonce : ping d'un rôle précis, image « aucune »", async () => {
+  const modal = await send({
+    type: 2, member: admin, channel_id: "1",
+    data: { name: "annonce", options: [{ name: "ping", type: 3, value: "role" }, { name: "role", type: 8, value: "555000000000000000" }, { name: "image", type: 3, value: "aucune" }] },
+  });
+  calls = [];
+  await submitAnnonce(modal.data.data.custom_id, "T", "Texte");
+  const body = JSON.parse(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
+  assert.equal(body.content, "<@&555000000000000000>");
+  assert.deepEqual(body.allowed_mentions, { roles: ["555000000000000000"] });
+  assert.equal(body.embeds[0].image, undefined);
+});
+
+test("/annonce : un rôle donné sans ping explicite est mentionné", async () => {
+  const modal = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce", options: [{ name: "role", type: 8, value: "555000000000000000" }] } });
+  assert.match(modal.data.data.custom_id, /\|role\|555000000000000000\|/);
+});
+
+test("/annonce : formulaire envoyé par un non-administrateur ou vide → refusé", async () => {
+  const id = "annonce|-|none|-|annonce";
+  const refused = await submitAnnonce(id, "T", "x", member);
+  assert.match(refused.data.data.content, /administrateurs/);
+  assert.equal(calls.length, 0);
+  await submitAnnonce(id, "   ", "x");
+  assert.match(JSON.parse(originalEdit().body).content, /ne peuvent pas être vides/);
+  assert.ok(!calls.some((c) => c.method === "POST" && c.url.endsWith("/messages")));
 });
 
 test("bouton du règlement : donne le rôle", async () => {
@@ -241,13 +403,11 @@ test("cycle complet : menu, ouverture, doublon, prise en charge, fermeture", asy
     jsonRes([{ id: "1", content: "premier", timestamp: new Date().toISOString(), author: USER, attachments: [], embeds: [] }]),
   );
 
-  const config = (await import("../config.json", { with: { type: "json" } })).default;
-  config.tickets.questions_channel_id = "123456789012345678";
   // 1-2. Choisir une raison dans le menu crée directement le ticket
-  const sel = await send({ type: 3, member, message: { flags: V2 }, data: { custom_id: "ticket:create", component_type: 3, values: ["acces"] } });
-  assert.equal(sel.data.type, 7); // le panneau est republié pour vider le menu
-  assert.ok(flat(sel.data.data.components).some((c) => c.custom_id === "ticket:create"));
-  config.tickets.questions_channel_id = "REMPLACE_PAR_ID_SALON_QUESTIONS";
+  const sel = await send({ type: 3, member, message: { flags: 0 }, data: { custom_id: "ticket:create", component_type: 3, values: ["acces"] } });
+  assert.equal(sel.data.type, 7); // le menu est remis à zéro, l'encadré n'est pas touché
+  assert.equal(sel.data.data.embeds, undefined);
+  assert.equal(sel.data.data.components[0].components[0].custom_id, "ticket:create");
   const create = JSON.parse(calls.find((c) => /\/guilds\/\d+\/channels$/.test(c.url)).body);
   assert.equal(create.name, "ticket-elodie-test");
   assert.equal(create.parent_id, "700000000000000007");
@@ -259,8 +419,8 @@ test("cycle complet : menu, ouverture, doublon, prise en charge, fermeture", asy
 
   // 3. Une seule demande ouverte (y compris depuis un ancien panneau)
   calls = [];
-  const old = await send({ type: 3, member, message: { flags: 0 }, data: { custom_id: "ticket:category", component_type: 3, values: ["support"] } });
-  assert.equal(old.data.type, 6);
+  const old = await send({ type: 3, member, message: { flags: V2 }, data: { custom_id: "ticket:category", component_type: 3, values: ["support"] } });
+  assert.equal(old.data.type, 6); // ancien panneau : on n'y touche pas
   assert.match(followUps().at(-1).content, /déjà une demande ouverte/);
   assert.ok(!calls.some((c) => c.method === "POST" && /\/guilds\/\d+\/channels$/.test(c.url)));
 
