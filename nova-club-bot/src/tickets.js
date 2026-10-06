@@ -1,4 +1,4 @@
-// Système de tickets : choix de catégorie, ouverture, prise en charge, fermeture avec transcription.
+// Système de tickets : ouverture depuis le menu, prise en charge, fermeture avec transcription.
 import config from "../config.json" with { type: "json" };
 import {
   COLOR,
@@ -8,7 +8,6 @@ import {
   ResponseType,
   UserError,
   discord,
-  editOriginal,
   ephemeral,
   fill,
   followUp,
@@ -20,7 +19,6 @@ const t = config.tickets;
 const MAX_TRANSCRIPT_MESSAGES = 200; // 2 pages de 100 messages = 2 sous-requêtes
 
 // Clés du stockage KV
-const choiceKey = (guildId, userId) => `choice:${guildId}:${userId}`;
 const openKey = (guildId, userId) => `open:${guildId}:${userId}`;
 const chanKey = (channelId) => `chan:${channelId}`;
 
@@ -70,27 +68,12 @@ async function kvGetJSON(env, key) {
   }
 }
 
-// ── 1. Choix de la catégorie dans le menu ────────────────────────────────────
-export function selectCategory(interaction, env, ctx) {
-  const value = interaction.data.values?.[0];
-  const user = userOf(interaction);
-  if (!t.categories.some((c) => c.value === value)) return ephemeral(config.errors.unknown_category);
-  // Mémorisé 15 minutes. Écrit en arrière-plan pour répondre tout de suite à Discord.
-  ctx.waitUntil(
-    env.TICKETS.put(choiceKey(interaction.guild_id, user.id), value, { expirationTtl: 900 }).catch((err) =>
-      console.error("KV put choice", err),
-    ),
-  );
-  return ephemeral(fill(t.category_selected, { category: categoryLabel(value) }));
-}
-
-// ── 2. Ouverture d'un ticket (travail en arrière-plan) ───────────────────────
-export async function openTicket(interaction, env) {
+// ── 1. Ouverture d'un ticket (travail en arrière-plan) ───────────────────────
+// Renvoie le message à afficher à la personne (lien vers son ticket).
+export async function openTicket(interaction, env, category) {
   const guildId = interaction.guild_id;
   const user = userOf(interaction);
-
-  const category = await env.TICKETS.get(choiceKey(guildId, user.id));
-  if (!category) throw new UserError(t.choose_category_first);
+  if (!t.categories.some((c) => c.value === category)) throw new UserError(config.errors.unknown_category);
 
   // Une seule demande ouverte par personne.
   const existing = await env.TICKETS.get(openKey(guildId, user.id));
@@ -152,10 +135,10 @@ export async function openTicket(interaction, env) {
     },
   });
 
-  await editOriginal(interaction, { content: fill(t.created, { channel: `<#${channel.id}>` }) });
+  return fill(t.created, { channel: `<#${channel.id}>` });
 }
 
-// ── 3. "Je m'en occupe" (staff uniquement) ───────────────────────────────────
+// ── 2. "Je m'en occupe" (staff uniquement) ───────────────────────────────────
 export function claimTicket(interaction, env, ctx) {
   if (!isStaff(interaction.member, env)) return ephemeral(t.claim_staff_only);
   const user = userOf(interaction);
@@ -168,6 +151,7 @@ export function claimTicket(interaction, env, ctx) {
 
   ctx.waitUntil(
     (async () => {
+      await new Promise((r) => setTimeout(r, 400)); // laisse Discord enregistrer la réponse
       await followUp(interaction, {
         content: fill(t.claimed_message, { user: `<@${user.id}>` }),
         allowed_mentions: { parse: [] },
@@ -186,7 +170,7 @@ export function claimTicket(interaction, env, ctx) {
   };
 }
 
-// ── 4. Fermeture : demande de confirmation ───────────────────────────────────
+// ── 3. Fermeture : demande de confirmation ───────────────────────────────────
 // Le salon n'est visible que par la personne et l'équipe : toute personne qui voit le bouton peut fermer.
 export function askCloseConfirmation() {
   return {
@@ -211,7 +195,7 @@ export function cancelClose() {
   return { type: ResponseType.UPDATE_MESSAGE, data: { content: t.close_cancelled, components: [] } };
 }
 
-// ── 5. Fermeture confirmée (travail en arrière-plan) ─────────────────────────
+// ── 4. Fermeture confirmée (travail en arrière-plan) ─────────────────────────
 export async function closeTicket(interaction, env) {
   const channelId = interaction.channel_id;
   const meta = await kvGetJSON(env, chanKey(channelId));

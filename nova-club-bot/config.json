@@ -1,33 +1,35 @@
 {
-  "_aide": "Tous les textes du bot sont ici. Modifie seulement ce qui est entre guillemets à droite des deux-points, puis redéploie. Variables possibles dans certains textes : {user}, {category}, {channel}, {staff}, {role}.",
-
+  "_aide": "Tous les textes du bot sont ici. Modifie seulement ce qui est entre guillemets à droite des deux-points, puis redéploie (npx wrangler deploy). Les valeurs marquées « À REMPLACER » sont des exemples. Variables possibles dans certains textes : {user}, {category}, {channel}, {staff}, {role}, {prix}, {lien}, {salon_questions}.",
   "server_name": "NOVA CLUB | E-commerce",
-  "color": "#7C3AED",
+  "color": "#FF6B1A",
   "timezone": "Europe/Paris",
   "footer": "NOVA CLUB | E-commerce",
-
   "commands": {
     "panel_infos": "Publier le panneau d'informations du serveur",
     "panel_reglement": "Publier le règlement avec le bouton d'acceptation",
     "panel_tickets": "Publier le panneau d'ouverture des tickets",
+    "panel_formation": "Publier le panneau de la formation",
+    "panel_outils": "Publier le panneau des outils",
+    "panel_faq": "Publier la FAQ",
+    "panel_autopilot": "Publier le panneau Nova Autopilot",
     "option_salon": "Salon où publier le panneau (par défaut : le salon actuel)"
   },
-
   "infos": {
     "title": "📌 Informations",
-    "banner_url": "",
+    "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-informations.gif",
     "welcome": "Bienvenue sur **NOVA CLUB | E-commerce** ! Ici, on apprend, on partage et on avance ensemble sur nos projets de boutique en ligne. Voici les salons à connaître pour bien démarrer :",
     "channels_title": "🧭 Les salons utiles",
     "channels": [
-      { "id": "REMPLACE_PAR_ID_SALON", "emoji": "📜", "description": "Le règlement à lire et accepter pour accéder au serveur." },
-      { "id": "REMPLACE_PAR_ID_SALON", "emoji": "📣", "description": "Les annonces importantes de l'équipe." },
-      { "id": "REMPLACE_PAR_ID_SALON", "emoji": "💬", "description": "La discussion générale entre membres." },
-      { "id": "REMPLACE_PAR_ID_SALON", "emoji": "🎫", "description": "Ouvre un ticket si tu as besoin d'aide." }
+      {
+        "id": "1556574078197047296",
+        "emoji": "📜",
+        "description": "Le règlement à lire et accepter pour accéder au serveur."
+      }
     ],
     "published": "✅ Le panneau d'informations a été publié dans {channel}."
   },
-
   "reglement": {
+    "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-reglement.gif",
     "title": "📜 Règlement du serveur",
     "intro": "Pour que NOVA CLUB reste un espace utile et agréable, merci de respecter ces règles :",
     "rules": [
@@ -45,22 +47,40 @@
     "already": "ℹ️ Tu as déjà accepté le règlement, tu as déjà le rôle {role}.",
     "published": "✅ Le règlement a été publié dans {channel}."
   },
-
   "tickets": {
-    "panel_title": "🎫 Besoin d'aide ?",
-    "panel_description": "1️⃣ Choisis la catégorie de ta demande dans le menu.\n2️⃣ Clique sur **Ouvrir un ticket**.\n\nUn salon privé sera créé, visible uniquement par toi et l'équipe.",
-    "select_placeholder": "Choisis une catégorie…",
+    "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-tickets.gif",
+    "questions_channel_id": "REMPLACE_PAR_ID_SALON_QUESTIONS",
+    "panel_title": "🎫 Contacter l'équipe",
+    "panel_description": "Besoin de contacter l'équipe ? Choisis la raison de ta demande dans le menu ci-dessous : un ticket privé sera créé automatiquement.\n\n⚠️ Pour les questions sur ta boutique, utilise plutôt le salon {salon_questions}.",
+    "select_placeholder": "Sélectionne la raison de ton ticket",
+    "old_panel": "ℹ️ Ce panneau a été mis à jour : choisis directement la raison de ta demande dans le menu, le ticket se crée tout seul.",
     "categories": [
-      { "value": "support", "label": "Support", "emoji": "🛠️", "description": "Aide générale sur le serveur" },
-      { "value": "acces", "label": "Problème d'accès", "emoji": "🔑", "description": "Rôle, salon ou contenu inaccessible" },
-      { "value": "formation", "label": "Question sur la formation", "emoji": "🎓", "description": "Une question sur un module ou une leçon" },
-      { "value": "autre", "label": "Autre", "emoji": "💡", "description": "Toute autre demande" }
+      {
+        "value": "support",
+        "label": "Support",
+        "emoji": "🛠️",
+        "description": "Aide générale sur le serveur"
+      },
+      {
+        "value": "acces",
+        "label": "Problème d'accès",
+        "emoji": "🔑",
+        "description": "Rôle, salon ou contenu inaccessible"
+      },
+      {
+        "value": "formation",
+        "label": "Question sur la formation",
+        "emoji": "🎓",
+        "description": "Une question sur un module ou une leçon"
+      },
+      {
+        "value": "autre",
+        "label": "Autre",
+        "emoji": "💡",
+        "description": "Toute autre demande"
+      }
     ],
-    "open_button_label": "Ouvrir un ticket",
-    "open_button_emoji": "📩",
     "channel_prefix": "ticket-",
-    "category_selected": "👍 Catégorie choisie : **{category}**. Clique maintenant sur « Ouvrir un ticket ».",
-    "choose_category_first": "⚠️ Choisis d'abord une catégorie dans le menu, puis clique de nouveau sur « Ouvrir un ticket ».",
     "already_open": "⚠️ Tu as déjà une demande ouverte : {channel}. Ferme-la avant d'en ouvrir une nouvelle.",
     "created": "✅ Ton ticket est prêt : {channel}",
     "welcome_title": "🎫 Nouveau ticket — {category}",
@@ -93,13 +113,100 @@
     "label_attachment": "Pièce jointe",
     "label_embed": "Encadré"
   },
-
+  "formation": {
+    "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-formation.gif",
+    "image_url": "https://nova-club-bot.novaclub.workers.dev/decouverte-formation.png",
+    "title": "🎓 Formation dropshipping eBay & Etsy",
+    "description": "Une formation pour apprendre, étape par étape, à vendre sur **eBay** et **Etsy** avec la méthode du dropshipping.",
+    "points": [
+      "👥 Accès à la communauté privée NOVA CLUB",
+      "🤖 Outil **Nova Autopilot** inclus",
+      "📚 Des modules clairs, du premier produit à la gestion des commandes"
+    ],
+    "details": "💶 Prix : **{prix}**\n🔗 {lien}",
+    "prix": "À REMPLACER (ex. 97 €)",
+    "lien": "https://exemple.com/a-remplacer-formation",
+    "button_label": "Découvrir la formation",
+    "button_emoji": "🚀",
+    "published": "✅ Le panneau de la formation a été publié dans {channel}."
+  },
+  "outils": {
+    "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-outils.gif",
+    "title": "🧰 Outils pour ton business",
+    "intro": "Une sélection d'outils utiles pour lancer et gérer ta boutique en ligne. Clique sur « Ouvrir » pour accéder à chaque outil.",
+    "button_label": "Ouvrir",
+    "tools": [
+      {
+        "name": "Outil 1 — À REMPLACER",
+        "description": "Courte description de l'outil (à remplacer).",
+        "url": "https://exemple.com/a-remplacer-outil-1"
+      },
+      {
+        "name": "Outil 2 — À REMPLACER",
+        "description": "Courte description de l'outil (à remplacer).",
+        "url": "https://exemple.com/a-remplacer-outil-2"
+      },
+      {
+        "name": "Outil 3 — À REMPLACER",
+        "description": "Courte description de l'outil (à remplacer).",
+        "url": "https://exemple.com/a-remplacer-outil-3"
+      }
+    ],
+    "published": "✅ Le panneau des outils a été publié dans {channel}."
+  },
+  "faq": {
+    "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-faq.gif",
+    "title": "❔ Questions fréquentes",
+    "questions": [
+      {
+        "question": "Qu'est-ce que le dropshipping ?",
+        "answer": "C'est une façon de vendre en ligne sans avoir de stock : quand un client commande sur ta boutique, tu passes la commande chez un fournisseur qui l'expédie directement au client."
+      },
+      {
+        "question": "Comment accéder à Nova Autopilot ?",
+        "answer": "Nova Autopilot est inclus avec la formation. Une fois inscrit, suis les instructions d'accès données dans l'espace membre. En cas de souci, ouvre un ticket « Problème d'accès »."
+      },
+      {
+        "question": "Comment ouvrir un ticket ?",
+        "answer": "Va dans le salon des tickets et choisis la raison de ta demande dans le menu : un salon privé est créé automatiquement entre toi et l'équipe."
+      },
+      {
+        "question": "Est-ce autorisé par les plateformes ?",
+        "answer": "Chaque plateforme a ses propres règles. Lis-les avant de vendre et ne vends que des produits que tu as le droit de vendre. L'équipe ne peut pas garantir les décisions des plateformes."
+      }
+    ],
+    "published": "✅ La FAQ a été publiée dans {channel}."
+  },
+  "autopilot": {
+    "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-autopilot.gif",
+    "title": "🤖 Nova Autopilot",
+    "description": "Nova Autopilot est l'outil qui t'aide à organiser le quotidien de ta boutique en ligne :",
+    "features": [
+      "🔎 **Trouver des produits** à proposer",
+      "📦 **Publication groupée** de tes annonces",
+      "📈 **Suivi des prix** de tes produits",
+      "🧾 **Gestion des commandes**",
+      "📊 **Comptabilité** de ton activité"
+    ],
+    "disclaimer": "ℹ️ Nova Autopilot est un outil d'organisation : il ne garantit aucun résultat ni aucun revenu. Tes résultats dépendent de ton travail et du respect des règles de chaque plateforme.",
+    "lien_autopilot": "https://exemple.com/a-remplacer-autopilot",
+    "button_label": "Découvrir Nova Autopilot",
+    "button_emoji": "🤖",
+    "published": "✅ Le panneau Nova Autopilot a été publié dans {channel}."
+  },
+  "media": {
+    "_aide": "Messages affichés à l'administrateur après publication d'un panneau : Discord indique s'il a bien lu chaque image.",
+    "animated": "🎞️ {file} : GIF animé reconnu par Discord.",
+    "image_ok": "🖼️ {file} : image reconnue par Discord.",
+    "not_image": "⚠️ {file} : Discord ne reçoit pas une image ({type}). Vérifie que le fichier est bien dans public/ et redéploie.",
+    "pending": "⏳ {file} : Discord n'a pas encore analysé l'image. Vérifie l'affichage dans le salon ; si elle n'apparaît pas, lance npm run check-images."
+  },
   "errors": {
     "admin_only": "⛔ Cette commande est réservée aux administrateurs.",
     "guild_only": "⛔ Cette action ne fonctionne que sur le serveur, pas en message privé.",
     "not_a_ticket": "⛔ Ce salon n'est pas un ticket géré par le bot.",
     "missing_config": "⚙️ Configuration incomplète : il manque le secret Cloudflare {name}. Ajoute-le puis réessaie.",
-    "invalid_channel_ids": "⚙️ Dans config.json, remplace les identifiants de salon invalides de la section « infos » : {ids}",
+    "invalid_channel_ids": "⚙️ Dans config.json, remplace les identifiants de salon invalides : {ids}",
     "unknown_category": "⚠️ Catégorie inconnue. Choisis-en une dans le menu.",
     "missing_permissions": "⛔ Le bot n'a pas les permissions nécessaires. Vérifie ses permissions dans ce salon et place son rôle au-dessus des rôles qu'il doit donner (Paramètres du serveur > Rôles).",
     "missing_access": "⛔ Le bot ne peut pas voir ce salon ou cette catégorie. Donne-lui l'accès « Voir le salon ».",
@@ -112,6 +219,8 @@
     "storage": "💾 Erreur du stockage Cloudflare KV. Réessaie dans quelques secondes.",
     "log_failed": "⚠️ Impossible d'envoyer la transcription dans le salon de logs : le ticket n'a PAS été supprimé. Vérifie LOG_CHANNEL_ID et les permissions du bot (envoyer des messages, joindre des fichiers).",
     "generic": "❌ Une erreur inattendue est survenue. Réessaie ; si le problème continue, préviens un administrateur.",
-    "unknown_action": "❓ Action inconnue ou plus prise en charge."
+    "unknown_action": "❓ Action inconnue ou plus prise en charge.",
+    "invalid_url": "⚙️ Dans config.json, l'adresse « {field} » n'est pas un lien valide (elle doit commencer par https://) : {value}",
+    "too_many_items": "⚙️ Trop d'éléments dans config.json pour ce panneau (« {field} », maximum {max})."
   }
 }

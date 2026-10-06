@@ -26,4 +26,8 @@ export const COMMANDS = [
   adminCommand("panel-infos", config.commands.panel_infos),
   adminCommand("panel-reglement", config.commands.panel_reglement),
   adminCommand("panel-tickets", config.commands.panel_tickets),
+  adminCommand("panel-formation", config.commands.panel_formation),
+  adminCommand("panel-outils", config.commands.panel_outils),
+  adminCommand("panel-faq", config.commands.panel_faq),
+  adminCommand("panel-autopilot", config.commands.panel_autopilot),
 ];

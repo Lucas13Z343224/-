@@ -10,7 +10,8 @@
     "secrets": "wrangler secret bulk .env",
     "register": "node --env-file=.env scripts/register-commands.js",
     "invite": "node --env-file=.env scripts/invite-url.js",
-    "test": "node --test"
+    "test": "node --test",
+    "check-images": "node scripts/check-images.js"
   },
   "engines": {
     "node": ">=20.6"

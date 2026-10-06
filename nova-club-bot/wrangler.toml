@@ -5,11 +5,17 @@ main = "src/index.js"
 compatibility_date = "2026-09-01"
 workers_dev = true
 
+# Images (bannières GIF, etc.) servies gratuitement par Cloudflare depuis le dossier public/.
+# Exemple : public/banniere-tickets.gif -> https://nova-club-bot.novaclub.workers.dev/banniere-tickets.gif
+# Les requêtes vers ces fichiers sont gratuites et illimitées ; tout le reste (dont la page
+# « en ligne ✅ » à la racine et les interactions Discord) est traité par le Worker.
+[assets]
+directory = "./public"
+
 # Stockage des tickets ouverts (Cloudflare KV, gratuit).
-# Remplace l'id par celui affiché par : npx wrangler kv namespace create TICKETS
 [[kv_namespaces]]
 binding = "TICKETS"
-id = "REMPLACE_PAR_ID_DU_KV"
+id = "a693b12728f0444e95be152943f837e3"
 
 # Journaux visibles dans le tableau de bord Cloudflare (Workers > nova-club-bot > Logs)
 [observability]
