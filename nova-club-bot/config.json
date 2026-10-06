@@ -230,10 +230,10 @@
     "attachment_wrong_type": "⚠️ {file} : Discord a reconnu la pièce jointe comme « {type} » au lieu de image/gif. Vérifie le fichier de public/.",
     "attachment_missing": "⚠️ {file} : la pièce jointe n'apparaît pas dans le message relu. Regarde le salon ; si la bannière manque, passe banner_position à \"haut_encadre\"."
   },
-  "images_version": "3",
+  "images_version": "4",
   "_images_version_aide": "Ajouté à la fin des adresses d'images (?v=2) pour que Discord recharge une image remplacée. Quand tu remplaces une image par une nouvelle version, augmente ce nombre (3, 4…) et redéploie, puis republie les panneaux.",
-  "largeur_invisible": 50,
-  "_largeur_invisible_aide": "Nombre de caractères invisibles « ⠀ » ajoutés en dernière ligne de chaque encadré de texte pour qu'il s'affiche à la largeur maximale de Discord (520 px), même avec un texte court : la bannière (520 px) reste alors centrée. Si la bannière dépasse de chaque côté ou si l'encadré reste étroit, AUGMENTE ce nombre ; si une ligne vide apparaît sous le texte (la ligne invisible passe à la ligne), DIMINUE-le. 0 = désactivé. Maximum 200.",
+  "largeur_invisible": 0,
+  "_largeur_invisible_aide": "DÉSACTIVÉ (0). Nombre de caractères invisibles « ⠀ » qui seraient ajoutés en dernière ligne de chaque encadré de texte pour qu'il s'affiche à la largeur maximale de Discord (520 px), même avec un texte court : la bannière (520 px) reste alors centrée. Si la bannière dépasse de chaque côté ou si l'encadré reste étroit, AUGMENTE ce nombre ; si une ligne vide apparaît sous le texte (la ligne invisible passe à la ligne), DIMINUE-le. 0 = désactivé. Maximum 200.",
   "annonce": {
     "modal_title": "Nouvelle annonce",
     "label_title": "Titre",

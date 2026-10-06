@@ -156,18 +156,18 @@ function assertLayout(body, banner, title, position = "fichier") {
   } else if (position === "haut_encadre") {
     assert.equal(body.content, undefined);
     const [first, main] = body.embeds;
-    assert.deepEqual(first, { color: BAR, image: { url: `${HOST}${banner}-haut.gif?v=3` } }); // l'image, rien d'autre
+    assert.deepEqual(first, { color: BAR, image: { url: `${HOST}${banner}-haut.gif?v=4` } }); // l'image, rien d'autre
     e = main;
     assert.equal(e.image, undefined);
   } else if (position === "haut") {
     e = body.embeds[0];
-    assert.equal(body.content, `${HOST}${banner}-haut.gif?v=3`);
+    assert.equal(body.content, `${HOST}${banner}-haut.gif?v=4`);
     assert.ok(!body.content.includes("\n"));
     assert.equal(e.image, undefined);
   } else {
     e = body.embeds[0];
     assert.equal(body.content, undefined);
-    assert.equal(e.image.url, `${HOST}${banner}.gif?v=3`);
+    assert.equal(e.image.url, `${HOST}${banner}.gif?v=4`);
   }
   assert.equal(e.title, title);
   assert.equal(e.color, ORANGE);
@@ -252,7 +252,7 @@ test("/panel-formation : encadré avec prix et lien, 2e encadré image, bouton l
   assert.match(e.description, /https:\/\/exemple\.com\/a-remplacer-formation/);
   const second = body.embeds[1];
   assert.equal(second.color, ORANGE);
-  assert.match(second.image.url, /decouverte-formation\.png\?v=3$/);
+  assert.match(second.image.url, /decouverte-formation\.png\?v=4$/);
   const [btn] = buttons(body);
   assert.equal(btn.style, 5);
   assert.equal(btn.label, "Découvrir la formation");
@@ -288,8 +288,8 @@ test("une image remplacée change d'adresse quand images_version change", async 
   const config = (await import("../config.json", { with: { type: "json" } })).default;
   const { imageUrl } = await import("../src/panels.js");
   const old = config.images_version;
-  config.images_version = "4";
-  assert.equal(imageUrl("https://x.example/a.gif"), "https://x.example/a.gif?v=4");
+  config.images_version = "5";
+  assert.equal(imageUrl("https://x.example/a.gif"), "https://x.example/a.gif?v=5");
   config.images_version = "";
   assert.equal(imageUrl("https://x.example/a.gif"), "https://x.example/a.gif");
   config.images_version = old;
@@ -332,7 +332,7 @@ test("position « haut » : le bot relit le message et confirme le GIF animé", 
     const { edit, body } = await publish("panel-faq");
     assert.match(edit, /banniere-faq-haut\.gif : GIF animé reconnu/);
     assert.equal(calls.filter((c) => c.method === "GET" && c.url.includes("/messages/888")).length, 1);
-    assert.equal(body.content, `${HOST}banniere-faq-haut.gif?v=3`);
+    assert.equal(body.content, `${HOST}banniere-faq-haut.gif?v=4`);
   }));
 
 test("position « haut » : aperçu pas encore créé par Discord → message d'attente", () =>
@@ -438,7 +438,7 @@ test("/annonce : options → formulaire → publication (bannière par défaut, 
   const post = calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/999000000000000000/messages"));
   const body = parseBody(post.body);
   const e = assertLayout(body, "banniere-annonce", "Titre de test");
-  assert.equal(e.description, `**Gras** et une liste :\n- un\n- deux\n${PAD(50)}`); // texte de l'annonce + ligne invisible
+  assert.equal(e.description, "**Gras** et une liste :\n- un\n- deux"); // texte de l'annonce, rien d'ajouté
   assert.equal(body.content, undefined); // pas de ping : aucun contenu texte
   assert.deepEqual(body.allowed_mentions, { parse: [] });
   assert.match(JSON.parse(originalEdit().body).content, /<#999000000000000000>/);
@@ -614,7 +614,7 @@ test("banner_position « encadre » : tous les panneaux reprennent l'ancienne ba
       for (const [cmd, n] of Object.entries(names)) {
         const { body } = await publish(cmd);
         assert.equal(body.content, undefined, cmd);
-        assert.equal(body.embeds[0].image.url, `${HOST}banniere-${n}.gif?v=3`, cmd);
+        assert.equal(body.embeds[0].image.url, `${HOST}banniere-${n}.gif?v=4`, cmd);
       }
     }),
   ));
@@ -626,7 +626,7 @@ test("banner_position « encadre » : /annonce met la bannière dans l'encadré 
     await submitAnnonce(modal.data.data.custom_id, "T", "Texte");
     const body = parseBody(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
     assert.equal(body.content, "@everyone");
-    assert.equal(body.embeds[0].image.url, `${HOST}banniere-annonce.gif?v=3`);
+    assert.equal(body.embeds[0].image.url, `${HOST}banniere-annonce.gif?v=4`);
   }));
 
 const PANEL_NAMES = { "panel-infos": "informations", "panel-reglement": "reglement", "panel-tickets": "tickets", "panel-formation": "formation", "panel-outils": "outils", "panel-faq": "faq", "panel-autopilot": "autopilot" };
@@ -636,7 +636,7 @@ test("banner_position « haut_encadre » : tous les panneaux = encadré bannièr
     for (const [cmd, n] of Object.entries(PANEL_NAMES)) {
       const { body } = await publish(cmd);
       assert.equal(body.content, undefined, cmd);
-      assert.deepEqual(body.embeds[0], { color: BAR, image: { url: `${HOST}banniere-${n}-haut.gif?v=3` } }, cmd);
+      assert.deepEqual(body.embeds[0], { color: BAR, image: { url: `${HOST}banniere-${n}-haut.gif?v=4` } }, cmd);
       assert.ok(body.embeds[1].title && body.embeds[1].description, cmd);
       assert.equal(body.embeds[1].color, ORANGE, cmd);
       assert.equal(body.embeds[1].image, undefined, cmd);
@@ -651,7 +651,7 @@ test("banner_position « haut_encadre » : menus et boutons restent sous le mess
     assert.equal(rules.components[0].components[0].custom_id, "rules:accept");
     const formation = (await publish("panel-formation")).body;
     assert.equal(formation.components[0].components[0].url, "https://exemple.com/a-remplacer-formation");
-    assert.equal(formation.embeds[2].image.url, `${HOST}decouverte-formation.png?v=3`);
+    assert.equal(formation.embeds[2].image.url, `${HOST}decouverte-formation.png?v=4`);
   })));
 
 test("banner_position « haut_encadre » : la couleur du 1er encadré est réglable (banner_embed_color)", () =>
@@ -670,8 +670,8 @@ test("banner_position « haut » : /panel-formation garde decouverte-formation.p
     const { body } = await publish("panel-formation");
     assert.equal(body.embeds.length, 2);
     assert.equal(body.embeds[0].image, undefined);
-    assert.equal(body.embeds[1].image.url, `${HOST}decouverte-formation.png?v=3`);
-    assert.equal(body.content, `${HOST}banniere-formation-haut.gif?v=3`);
+    assert.equal(body.embeds[1].image.url, `${HOST}decouverte-formation.png?v=4`);
+    assert.equal(body.content, `${HOST}banniere-formation-haut.gif?v=4`);
   }));
 
 test("banner_position « haut » : tous les panneaux = adresse seule dans le contenu", () =>
@@ -679,7 +679,7 @@ test("banner_position « haut » : tous les panneaux = adresse seule dans le con
     withQuestionsChannel(async () => {
       for (const [cmd, n] of Object.entries(PANEL_NAMES)) {
         const { body } = await publish(cmd);
-        assert.equal(body.content, `${HOST}banniere-${n}-haut.gif?v=3`, cmd);
+        assert.equal(body.content, `${HOST}banniere-${n}-haut.gif?v=4`, cmd);
         assert.equal(body.embeds[0].image === undefined || cmd === "panel-formation", true, cmd);
       }
     }),
@@ -691,7 +691,7 @@ test("banner_position « haut » : /annonce garde le ping avant l'adresse, sur u
     calls = [];
     await submitAnnonce(modal.data.data.custom_id, "T", "Texte");
     const body = parseBody(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
-    assert.equal(body.content, `@everyone\n${HOST}banniere-annonce-haut.gif?v=3`);
+    assert.equal(body.content, `@everyone\n${HOST}banniere-annonce-haut.gif?v=4`);
     assert.deepEqual(body.allowed_mentions, { parse: ["everyone"] });
   }));
 
@@ -702,7 +702,7 @@ test("banner_position « haut_encadre » : /annonce sans image choisie → banni
   const body = parseBody(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
   assert.equal(body.content, "<@&555000000000000000>");
   assert.deepEqual(body.allowed_mentions, { roles: ["555000000000000000"] });
-  assert.deepEqual(body.embeds[0], { color: BAR, image: { url: `${HOST}banniere-annonce-haut.gif?v=3` } });
+  assert.deepEqual(body.embeds[0], { color: BAR, image: { url: `${HOST}banniere-annonce-haut.gif?v=4` } });
   assert.equal(body.embeds[1].title, "Titre");
   assert.equal(body.embeds[1].color, ORANGE);
 }));
@@ -760,7 +760,7 @@ test("« fichier » : menus et boutons restent sous le message (dans payload_jso
     assert.equal(rules.components[0].components[0].custom_id, "rules:accept");
     const formation = (await publish("panel-formation")).body;
     assert.equal(formation.components[0].components[0].url, "https://exemple.com/a-remplacer-formation");
-    assert.equal(formation.embeds[1].image.url, `${HOST}decouverte-formation.png?v=3`); // image de la formation dans l'encadré
+    assert.equal(formation.embeds[1].image.url, `${HOST}decouverte-formation.png?v=4`); // image de la formation dans l'encadré
   }));
 
 test("« fichier » : /annonce garde le ping dans le contenu, la bannière est jointe", async () => {
@@ -897,81 +897,61 @@ test("les autres modes restent disponibles et n'utilisent pas ASSETS", async () 
   }
 });
 
-// ── Largeur maximale : dernière ligne invisible (largeur_invisible) ──────────
+// ── Ligne invisible (largeur_invisible) : désactivée par défaut (0) ─────────
 const lines = (text) => text.split("\n");
-
-test("largeur_invisible : 50 par défaut, images_version à 3", async () => {
+const withPadding = async (n, fn) => {
   const config = (await import("../config.json", { with: { type: "json" } })).default;
-  assert.equal(config.largeur_invisible, 50);
-  assert.equal(config.images_version, "3");
+  const old = config.largeur_invisible;
+  config.largeur_invisible = n;
+  try {
+    return await fn();
+  } finally {
+    config.largeur_invisible = old;
+  }
+};
+
+test("largeur_invisible vaut 0 par défaut, images_version à 4", async () => {
+  const config = (await import("../config.json", { with: { type: "json" } })).default;
+  assert.equal(config.largeur_invisible, 0);
+  assert.equal(config.images_version, "4");
 });
 
-test("chaque encadré de texte se termine par une seule ligne invisible, sans ligne vide en plus", () =>
-  withQuestionsChannel(async () => {
-    for (const cmd of Object.keys(PANEL_NAMES)) {
-      const { body } = await publish(cmd);
-      const d = body.embeds[0].description;
-      const l = lines(d);
-      assert.equal(l.at(-1), PAD(50), `${cmd} : dernière ligne = 50 caractères U+2800`);
-      assert.notEqual(l.at(-2).trim(), "", `${cmd} : pas de ligne vide avant la ligne invisible`);
-      assert.ok(!d.includes(`\n\n${PAD(1)}`), cmd);
-      assert.ok(!d.slice(0, -50).includes("\u2800"), `${cmd} : caractères invisibles seulement à la fin`);
-    }
-  }));
-
-test("la ligne invisible est ajoutée quel que soit le mode de bannière", () =>
+test("par défaut, aucun caractère invisible U+2800 dans aucun panneau ni dans /annonce", () =>
   withQuestionsChannel(async () => {
     for (const mode of ["fichier", "haut_encadre", "haut", "encadre"]) {
       await withPosition(mode, async () => {
-        const { body } = await publish("panel-faq");
-        const main = body.embeds.find((e) => e.title === "❓ FAQ");
-        assert.equal(lines(main.description).at(-1), PAD(50), mode);
+        for (const cmd of Object.keys(PANEL_NAMES)) {
+          const { body } = await publish(cmd);
+          assert.ok(!JSON.stringify(body).includes("\u2800"), `${cmd} (${mode})`);
+        }
       });
     }
+    const modal = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce" } });
+    calls = [];
+    await submitAnnonce(modal.data.data.custom_id, "T", "Texte court");
+    const body = parseBody(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
+    assert.equal(body.embeds[0].description, "Texte court");
   }));
 
-test("pas de ligne invisible sur le 2e encadré de /panel-formation (image) ni sur l'encadré de bannière", async () => {
-  const { body } = await publish("panel-formation");
-  assert.equal(lines(body.embeds[0].description).at(-1), PAD(50));
-  assert.equal(body.embeds[1].description, undefined);
-  assert.deepEqual(Object.keys(body.embeds[1]).sort(), ["color", "image"]);
-  await withPosition("haut_encadre", async () => {
-    const { body: b } = await publish("panel-formation");
-    assert.deepEqual(Object.keys(b.embeds[0]).sort(), ["color", "image"]); // bannière seule, rien d'ajouté
-    assert.equal(b.embeds[2].description, undefined);
-  });
+test("la description se termine par le dernier texte (pas de ligne vide ajoutée)", async () => {
+  const { body } = await publish("panel-faq");
+  const d = body.embeds[0].description;
+  assert.ok(d.endsWith("L'équipe ne peut pas garantir les décisions des plateformes."));
 });
 
-test("/annonce : la ligne invisible suit le texte de l'annonce et le ping reste dans le contenu", async () => {
-  const modal = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce", options: [{ name: "ping", type: 3, value: "everyone" }] } });
-  calls = [];
-  await submitAnnonce(modal.data.data.custom_id, "T", "Texte court");
-  const body = parseBody(calls.find((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")).body);
-  assert.equal(body.content, "@everyone");
-  assert.equal(body.embeds[0].description, `Texte court\n${PAD(50)}`);
-});
+test("l'option reste disponible : largeur_invisible = N ajoute une dernière ligne de N caractères U+2800", () =>
+  withPadding(38, async () => {
+    const { body } = await publish("panel-faq");
+    const l = lines(body.embeds[0].description);
+    assert.equal(l.at(-1), PAD(38));
+    assert.notEqual(l.at(-2).trim(), "");
+    // pas sur le 2e encadré de /panel-formation
+    const { body: f } = await publish("panel-formation");
+    assert.equal(f.embeds[1].description, undefined);
+  }));
 
-test("largeur_invisible est réglable (nombre de caractères), 0 = désactivé", async () => {
-  const config = (await import("../config.json", { with: { type: "json" } })).default;
-  try {
-    config.largeur_invisible = 38;
-    assert.equal(lines((await publish("panel-faq")).body.embeds[0].description).at(-1), PAD(38));
-    config.largeur_invisible = 0;
-    const d = (await publish("panel-faq")).body.embeds[0].description;
-    assert.ok(!d.includes("\u2800"));
-    config.largeur_invisible = "n'importe quoi";
-    assert.ok(!(await publish("panel-faq")).body.embeds[0].description.includes("\u2800"));
-    config.largeur_invisible = 5000; // plafonné
-    assert.equal(lines((await publish("panel-faq")).body.embeds[0].description).at(-1), PAD(200));
-  } finally {
-    config.largeur_invisible = 50;
-  }
-});
-
-test("la ligne invisible compte dans la limite de 4096 caractères de Discord", async () => {
-  const modal = await send({ type: 2, member: admin, channel_id: "1", data: { name: "annonce" } });
-  calls = [];
-  await submitAnnonce(modal.data.data.custom_id, "T", "x".repeat(4060)); // 4060 + 1 + 50 > 4096
-  assert.ok(!calls.some((c) => c.method === "POST" && c.url.endsWith("/channels/1/messages")));
-  assert.match(JSON.parse(originalEdit().body).content, /trop long pour Discord/);
+test("largeur_invisible : valeur invalide ou 0 → rien n'est ajouté ; plafond à 200", async () => {
+  await withPadding("n'importe quoi", async () => assert.ok(!(await publish("panel-faq")).body.embeds[0].description.includes("\u2800")));
+  await withPadding(0, async () => assert.ok(!(await publish("panel-faq")).body.embeds[0].description.includes("\u2800")));
+  await withPadding(5000, async () => assert.equal(lines((await publish("panel-faq")).body.embeds[0].description).at(-1), PAD(200)));
 });

@@ -56,7 +56,7 @@ Les boutons et menus utilisent des `custom_id` fixes : ils continuent de fonctio
 
 Les images sont dans le dossier [`public/`](public/) et servies gratuitement par le Worker (fichiers statiques Cloudflare) à des adresses stables,
 par exemple `https://nova-club-bot.novaclub.workers.dev/banniere-tickets.gif`. La page « en ligne ✅ » reste à la racine.
-Le bot ajoute `?v=3` à ces adresses quand il publie (réglage `images_version`) : cela force Discord à recharger une image que tu as remplacée.
+Le bot ajoute `?v=4` à ces adresses quand il publie (réglage `images_version`) : cela force Discord à recharger une image que tu as remplacée.
 
 > **Tu mets à jour un bot déjà installé ?** Va directement à la section [Mise à jour : bannière en pièce jointe](#mise-à-jour--bannière-en-pièce-jointe).
 
@@ -324,8 +324,8 @@ Ouvre `config.json` avec le Bloc-notes ou VS Code. Les valeurs **À REMPLACER** 
 | `banner_position` | `"fichier"` (défaut : GIF « -haut » en pièce jointe), `"haut_encadre"` (encadré de bannière seule + encadré habituel), `"haut"` (adresse dans le texte du message) ou `"encadre"` (ancienne bannière dans l'encadré) |
 | `banner_embed_color` | couleur du 1er encadré en mode `"haut_encadre"` uniquement : `#2B2D31` = fond du thème sombre de Discord (barre invisible) |
 | `…banner_haut_url` | adresse de la bannière « -haut » de chaque panneau (le **nom du fichier** doit exister dans `public/` ; modes `"fichier"`, `"haut_encadre"` et `"haut"`) ; `…banner_url` = l'ancienne bannière (mode `"encadre"`) |
-| `largeur_invisible` | nombre de caractères invisibles « ⠀ » (U+2800) ajoutés en **dernière ligne** de chaque encadré de texte, pour qu'il s'affiche à la **largeur maximale** de Discord (520 px) même avec un texte court. `0` = désactivé, maximum 200. Voir [Régler la largeur des encadrés](#régler-la-largeur-des-encadrés) |
-| `images_version` | numéro ajouté aux adresses (`?v=3`). **Augmente-le** (3, 4…) quand tu remplaces une image par une nouvelle version, puis redéploie et republie |
+| `largeur_invisible` | **`0` = désactivé (réglage actuel)**. Nombre de caractères invisibles « ⠀ » (U+2800) ajoutés en **dernière ligne** de chaque encadré de texte, pour qu'il s'affiche à la **largeur maximale** de Discord (520 px) même avec un texte court. `0` = désactivé, maximum 200. Voir [Régler la largeur des encadrés](#régler-la-largeur-des-encadrés) |
+| `images_version` | numéro ajouté aux adresses (`?v=4`). **Augmente-le** (3, 4…) quand tu remplaces une image par une nouvelle version, puis redéploie et republie |
 | `annonce.images` | les choix de l'option `image` de `/annonce` (nom affiché + bannière). `default_image` = choix par défaut |
 | `infos.channels` | pour chaque salon : identifiant (`"id"`), emoji, description |
 | `reglement.rules` | une règle par ligne, numérotation automatique |
@@ -470,11 +470,13 @@ nova-club-bot/
 
 ### Régler la largeur des encadrés
 
-Les bannières « -haut » font **520 px de large** (marges transparentes pour centrer le cadre au-dessus de l'encadré). Pour que le centrage soit juste, chaque encadré de texte doit lui aussi faire 520 px, même avec un texte court.
-Le bot ajoute donc à la fin de chaque encadré de texte **une dernière ligne invisible** de `largeur_invisible` caractères « ⠀ » (U+2800, qui ne sont pas des espaces pour Discord, donc non supprimés).
+Des bannières « -haut » de **520 px de large** (avec marges transparentes) ne sont centrées que si l'encadré fait lui aussi 520 px, même avec un texte court.
+Quand `largeur_invisible` est supérieur à 0, le bot ajoute donc à la fin de chaque encadré de texte **une dernière ligne invisible** de `largeur_invisible` caractères « ⠀ » (U+2800, qui ne sont pas des espaces pour Discord, donc non supprimés).
 Elle n'est pas ajoutée au 2e encadré de `/panel-formation` (l'image) ni à l'encadré de bannière du mode `"haut_encadre"`.
 
-La valeur par défaut est **50**. Je ne peux pas mesurer le rendu dans Discord : règle-la à l'œil après avoir republié un panneau **à texte court** (par exemple `/panel-faq` avec une seule question) :
+> **Fonction désactivée par défaut (`largeur_invisible` = `0`).** Les bannières « -haut » sont revenues à la version précédente (alignées à gauche) : aucune ligne invisible n'est ajoutée. Cette section ne sert que si tu veux la réactiver un jour.
+
+Pour la réactiver, mets par exemple `50`. Je ne peux pas mesurer le rendu dans Discord : règle la valeur à l'œil après avoir republié un panneau **à texte court** (par exemple `/panel-faq` avec une seule question) :
 
 | Ce que tu vois | Quoi faire |
 |---|---|
@@ -524,7 +526,7 @@ npx wrangler deploy
 npm run check-images
 ```
 
-> **Bannières 520 px** : remplace tes 8 fichiers `banniere-…-haut.gif` dans `public/` par les nouveaux (même noms) **avant** `npx wrangler deploy`. Le `config.json` du ZIP a `images_version` à `"3"` : Discord recharge ainsi les nouvelles images au lieu des anciennes en cache. Voir aussi [Régler la largeur des encadrés](#régler-la-largeur-des-encadrés).
+> **Bannières « -haut » de la version précédente (alignées à gauche)** : remets tes 8 fichiers `banniere-…-haut.gif` d'origine dans `public/` (même noms) **avant** `npx wrangler deploy`. Le `config.json` du ZIP a `images_version` à `"4"` : Discord recharge ainsi ces images au lieu des bannières 520 px gardées en cache. Voir aussi [Régler la largeur des encadrés](#régler-la-largeur-des-encadrés).
 
 - `npm test` doit afficher `fail 0`.
 - `npm run check-images -- --local` doit afficher « Position des bannières : « fichier » » puis « Toutes les images sont prêtes ».
