@@ -27,7 +27,7 @@
     "title": "📌 Informations",
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-informations.gif",
     "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-informations-haut.gif",
-    "welcome": "Bienvenue sur **NOVA CLUB | E-commerce** ! Ici, on apprend, on partage et on avance ensemble sur nos projets de boutique en ligne.",
+    "welcome": "Bienvenue sur **Nova Club | E-commerce** ! Ici, on apprend, on partage et on avance ensemble pour ouvrir sa boutique en dropshipping sur **eBay** et **Etsy**.",
     "channels_title": "🧭 Les salons utiles",
     "channels": [
       {
@@ -36,19 +36,24 @@
         "description": "Le règlement à lire et accepter pour accéder au serveur."
       }
     ],
-    "published": "✅ Le panneau d'informations a été publié dans {channel}."
+    "published": "✅ Le panneau d'informations a été publié dans {channel}.",
+    "join_title": "🚀 Rejoins-nous",
+    "join_text": "La formation, le programme et l'outil **Nova Autopilot** sont sur le site : {site}\nTu es déjà élève ? Connecte-toi avec ton compte Discord : {connexion}",
+    "site": "https://novaclub.eu/",
+    "connexion": "https://novaclub.eu/connexion.html"
   },
   "reglement": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-reglement.gif",
     "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-reglement-haut.gif",
     "title": "📜 Règlement du serveur",
-    "intro": "Pour que NOVA CLUB reste un espace utile et agréable, merci de respecter ces règles.",
+    "intro": "Pour que Nova Club reste un espace utile et agréable pour tous les élèves, merci de respecter ces règles.",
     "rules": [
       "Reste respectueux et bienveillant avec tous les membres.",
       "Pas de spam, de publicité ni de message privé non sollicité.",
       "Publie chaque message dans le salon adapté.",
       "Ne partage pas les contenus de la formation en dehors du serveur.",
-      "Aucune arnaque, aucun lien douteux, aucune promesse de gains irréalistes.",
+      "Respecte les règles de chaque plateforme (eBay, Etsy) et ne vends que des produits que tu as le droit de vendre.",
+      "Aucune arnaque, aucun lien douteux, aucune promesse de gains : les résultats sont individuels et rien n'est garanti.",
       "Les décisions de l'équipe de modération doivent être respectées."
     ],
     "outro": "En cliquant sur le bouton ci-dessous, tu confirmes avoir lu et accepté ce règlement.",
@@ -65,7 +70,7 @@
     "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-tickets-haut.gif",
     "questions_channel_id": "REMPLACE_PAR_ID_SALON_QUESTIONS",
     "panel_title": "🎫 Support — Nova Club",
-    "panel_description": "Besoin de contacter l'équipe ? Choisis la raison de ta demande dans le menu ci-dessous : un ticket privé sera créé automatiquement.\n\n**📂 Les catégories**\n{categories}\n\n**⚠️ Avant d'ouvrir un ticket**\nPour les questions sur ta boutique, utilise plutôt le salon {salon_questions}.",
+    "panel_description": "Besoin de contacter l'équipe ? Choisis la raison de ta demande dans le menu ci-dessous : un ticket privé sera créé automatiquement. L'équipe répond tous les jours.\n\n**📂 Les catégories**\n{categories}\n\n**⚠️ Avant d'ouvrir un ticket**\nPour les questions sur ta boutique, utilise plutôt le salon {salon_questions}.",
     "select_placeholder": "Sélectionne la raison de ton ticket",
     "old_panel": "ℹ️ Ce panneau a été mis à jour : choisis directement la raison de ta demande dans le menu, le ticket se crée tout seul.",
     "categories": [
@@ -79,13 +84,13 @@
         "value": "acces",
         "label": "Problème d'accès",
         "emoji": "🔑",
-        "description": "Rôle, salon ou contenu inaccessible"
+        "description": "Connexion, lien d'activation, accès à la formation ou à Nova Autopilot"
       },
       {
         "value": "formation",
         "label": "Question sur la formation",
         "emoji": "🎓",
-        "description": "Une question sur un module ou une leçon"
+        "description": "Une question sur un module ou une vidéo"
       },
       {
         "value": "autre",
@@ -133,41 +138,52 @@
     "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-formation-haut.gif",
     "image_url": "https://nova-club-bot.novaclub.workers.dev/decouverte-formation.png",
     "title": "🎓 Formation dropshipping eBay & Etsy",
-    "description": "Une formation pour apprendre, étape par étape, à vendre sur **eBay** et **Etsy**.",
+    "description": "**27 vidéos** pour ouvrir ta boutique, choisir tes produits et expédier sans stock, sur **eBay** et **Etsy**. **Un mois de Nova Autopilot offert.**",
     "points": [
-      "👥 Accès à la communauté privée NOVA CLUB",
-      "🤖 Outil **Nova Autopilot** inclus",
-      "📚 Des modules clairs, du premier produit à la gestion des commandes"
+      "📚 27 vidéos courtes (3 h 18) en 4 modules, sur eBay comme sur Etsy",
+      "♾️ Accès à vie, au rythme que tu veux",
+      "🔄 Mises à jour gratuites : les leçons suivent les plateformes",
+      "👥 Groupe privé : un salon Discord réservé aux élèves",
+      "🤖 1 mois de Nova Autopilot offert",
+      "🧾 Modèles de fiches produit et de réponses SAV"
     ],
-    "details": "**Prix :** {prix}\n**Découvrir la formation :** {lien}",
-    "prix": "À REMPLACER (ex. 97 €)",
-    "lien": "https://exemple.com/a-remplacer-formation",
+    "details": "**Prix :** {prix}\n**Rejoindre la formation :** {lien}",
+    "prix": "297 € — paiement unique, pas d'abonnement sur la formation",
+    "lien": "https://novaclub.eu/",
     "button_label": "Découvrir la formation",
     "button_emoji": "🚀",
     "published": "✅ Le panneau de la formation a été publié dans {channel}.",
     "points_title": "✨ Ce que tu obtiens",
-    "details_title": "💶 Prix et accès"
+    "details_title": "💶 Prix et accès",
+    "programme_title": "📖 Le programme",
+    "modules": [
+      "**01** — Fonctionnement & création de la boutique",
+      "**02** — Analyse du marché & recherche de produits",
+      "**03** — Traitement des commandes & gestion de la boutique",
+      "**04** — Bonus"
+    ],
+    "disclaimer": "Les résultats présentés sur le site sont des témoignages individuels et ne constituent pas une garantie de gain."
   },
   "outils": {
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-outils.gif",
     "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-outils-haut.gif",
     "title": "🛠️ Outils pour ton business",
-    "intro": "Une sélection d'outils utiles pour lancer et gérer ta boutique en ligne.",
+    "intro": "Les ressources officielles Nova Club pour lancer et gérer ta boutique en ligne.",
     "tools": [
       {
-        "name": "Outil 1 — À REMPLACER",
-        "description": "Courte description de l'outil (à remplacer).",
-        "url": "https://exemple.com/a-remplacer-outil-1"
+        "name": "Nova Autopilot",
+        "description": "Le bot qui repère les produits, crée tes fiches, passe tes commandes chez le fournisseur et renvoie les suivis sur eBay.",
+        "url": "https://novaclub.eu/#autopilot"
       },
       {
-        "name": "Outil 2 — À REMPLACER",
-        "description": "Courte description de l'outil (à remplacer).",
-        "url": "https://exemple.com/a-remplacer-outil-2"
+        "name": "Ton espace élève",
+        "description": "Connecte-toi avec ton compte Discord pour accéder à la formation et à Nova Autopilot. Lien d'activation perdu ? Tu peux renvoyer ton accès.",
+        "url": "https://novaclub.eu/connexion.html"
       },
       {
-        "name": "Outil 3 — À REMPLACER",
-        "description": "Courte description de l'outil (à remplacer).",
-        "url": "https://exemple.com/a-remplacer-outil-3"
+        "name": "La formation Dropshipping eBay & Etsy",
+        "description": "Le programme complet, l'aperçu gratuit et les réponses aux questions fréquentes.",
+        "url": "https://novaclub.eu/"
       }
     ],
     "published": "✅ Le panneau des outils a été publié dans {channel}.",
@@ -179,20 +195,40 @@
     "title": "❓ FAQ",
     "questions": [
       {
-        "question": "Qu'est-ce que le dropshipping ?",
-        "answer": "C'est une façon de vendre en ligne sans avoir de stock : quand un client commande sur ta boutique, tu passes la commande chez un fournisseur qui l'expédie directement au client."
+        "question": "Faut-il du stock ou un capital de départ ?",
+        "answer": "Ni l'un ni l'autre. Tu n'achètes le produit qu'une fois la vente encaissée, et c'est ton fournisseur qui expédie. Prévois simplement de quoi avancer tes premières commandes le temps des virements."
+      },
+      {
+        "question": "Combien de temps avant une première vente ?",
+        "answer": "Cela dépend de la boutique et des produits. La formation te guide étape par étape pour publier tes premières annonces vite ; certains élèves vendent dès la première semaine, d'autres mettent plus longtemps. Rien n'est garanti."
+      },
+      {
+        "question": "Comment fonctionne Nova Autopilot, et combien coûte-t-il ?",
+        "answer": "Il repère les produits, crée les fiches, passe tes commandes chez le fournisseur et renvoie les suivis. Le premier mois est offert, puis 97 €/mois ou 247 €/trimestre, sans engagement. Tu peux l'arrêter et garder la formation."
       },
       {
         "question": "Comment accéder à Nova Autopilot ?",
-        "answer": "Nova Autopilot est inclus avec la formation. Une fois inscrit, suis les instructions d'accès données dans l'espace membre. En cas de souci, ouvre un ticket « Problème d'accès »."
+        "answer": "Connecte-toi avec ton compte Discord sur la page de connexion : https://novaclub.eu/connexion.html. Une leçon de la formation montre comment l'installer et le configurer. Lien d'activation perdu ? Tu peux renvoyer ton accès depuis cette page."
       },
       {
-        "question": "Comment ouvrir un ticket ?",
-        "answer": "Va dans le salon des tickets et choisis la raison de ta demande dans le menu : un salon privé est créé automatiquement entre toi et l'équipe."
+        "question": "L'accès est-il vraiment à vie ?",
+        "answer": "Oui. Un seul paiement de 297 €, accès illimité aux leçons, mises à jour incluses."
+      },
+      {
+        "question": "Est-ce adapté à un débutant complet ?",
+        "answer": "Oui. La formation part de zéro : ouverture du compte, paramétrage, premier produit, première commande."
+      },
+      {
+        "question": "Sur quelles plateformes puis-je vendre ?",
+        "answer": "La formation couvre eBay et Etsy. Tu peux commencer par une seule plateforme et ajouter l'autre ensuite."
       },
       {
         "question": "Est-ce autorisé par les plateformes ?",
         "answer": "Chaque plateforme a ses propres règles. Lis-les avant de vendre et ne vends que des produits que tu as le droit de vendre. L'équipe ne peut pas garantir les décisions des plateformes."
+      },
+      {
+        "question": "Comment ouvrir un ticket ?",
+        "answer": "Va dans le salon des tickets et choisis la raison de ta demande dans le menu : un salon privé est créé automatiquement entre toi et l'équipe."
       }
     ],
     "published": "✅ La FAQ a été publiée dans {channel}.",
@@ -202,20 +238,24 @@
     "banner_url": "https://nova-club-bot.novaclub.workers.dev/banniere-autopilot.gif",
     "banner_haut_url": "https://nova-club-bot.novaclub.workers.dev/banniere-autopilot-haut.gif",
     "title": "🤖 Nova Autopilot",
-    "description": "**Nova Autopilot** t'aide à organiser le quotidien de ta boutique en ligne, à partir d'un seul outil.",
+    "description": "**Nova Autopilot** est le bot qui fait tourner ta boutique eBay : il repère ce qui se vend, crée tes fiches produit et passe tes commandes chez le fournisseur. Une leçon de la formation montre comment l'installer et le configurer.",
     "features": [
-      "🔎 **Trouver des produits** à proposer",
-      "📦 **Publication groupée** de tes annonces",
-      "📈 **Suivi des prix** de tes produits",
-      "🧾 **Gestion des commandes**",
-      "📊 **Comptabilité** de ton activité"
+      "🔎 **Repère les best-sellers** à proposer",
+      "📝 **Crée tes fiches produit**",
+      "📦 **Passe tes commandes** chez le fournisseur",
+      "🚚 **Renvoie les suivis** sur eBay"
     ],
-    "disclaimer": "ℹ️ Nova Autopilot est un outil d'organisation : il ne garantit aucun résultat ni aucun revenu. Tes résultats dépendent de ton travail et du respect des règles de chaque plateforme.",
-    "lien_autopilot": "https://exemple.com/a-remplacer-autopilot",
+    "disclaimer": "Nova Autopilot est un outil d'organisation : il ne garantit aucun résultat ni aucun revenu. Les résultats présentés sur le site sont des témoignages individuels et ne constituent pas une garantie de gain.",
+    "lien_autopilot": "https://novaclub.eu/#autopilot",
     "button_label": "Découvrir Nova Autopilot",
     "button_emoji": "🤖",
     "published": "✅ Le panneau Nova Autopilot a été publié dans {channel}.",
-    "features_title": "⚙️ Ce que fait l'outil"
+    "features_title": "⚙️ Ce qu'il fait",
+    "offer_title": "💶 Prix",
+    "offer": "**1 mois offert** avec la formation, puis **97 €/mois** ou **247 €/trimestre**, sans engagement. Tu peux l'arrêter à tout moment : la formation reste à toi.",
+    "access_title": "🔑 Accès",
+    "access": "Connecte-toi avec ton compte Discord : {connexion}",
+    "connexion": "https://novaclub.eu/connexion.html"
   },
   "media": {
     "_aide": "Messages affichés à l'administrateur après publication d'un panneau : Discord indique s'il a bien lu chaque image.",

@@ -58,7 +58,7 @@ Les images sont dans le dossier [`public/`](public/) et servies gratuitement par
 par exemple `https://nova-club-bot.novaclub.workers.dev/banniere-tickets.gif`. La page « en ligne ✅ » reste à la racine.
 Le bot ajoute `?v=4` à ces adresses quand il publie (réglage `images_version`) : cela force Discord à recharger une image que tu as remplacée.
 
-> **Tu mets à jour un bot déjà installé ?** Va directement à la section [Mise à jour : bannière en pièce jointe](#mise-à-jour--bannière-en-pièce-jointe).
+> **Tu mets à jour un bot déjà installé ?** Va directement à la section [Mise à jour : textes issus du site](#mise-à-jour--textes-issus-du-site).
 
 ---
 
@@ -83,7 +83,7 @@ Le bot ajoute `?v=4` à ces adresses quand il publie (réglage `images_version`)
 17. [Déploiement automatique depuis GitHub](#17-déploiement-automatique-depuis-github)
 18. [Ce que cette méthode ne peut pas faire](#18-ce-que-cette-méthode-ne-peut-pas-faire)
 19. [Dépannage](#19-dépannage)
-20. [Mise à jour : bannière en pièce jointe](#mise-à-jour--bannière-en-pièce-jointe)
+20. [Mise à jour : textes issus du site](#mise-à-jour--textes-issus-du-site)
 
 ---
 
@@ -303,7 +303,7 @@ Après chaque publication, le message privé de confirmation indique ce que Disc
    - Dans le ticket, avec le second compte, clique sur *Je m'en occupe* → refusé (réservé au staff). Avec un compte Staff → bouton grisé « Pris en charge ».
    - Clique sur *Fermer le ticket* → confirmation → *Oui, fermer* → la transcription arrive dans le salon de logs, puis le salon disparaît.
 4. **`/panel-formation`**, **`/panel-outils`**, **`/panel-faq`**, **`/panel-autopilot`** → vérifie la bannière, l'encadré et que chaque bouton ouvre le bon lien.
-   Tant que les liens d'exemple (`https://exemple.com/a-remplacer-…`) sont là, les boutons mènent vers une page d'exemple : remplace-les dans `config.json`.
+   Les boutons ouvrent `https://novaclub.eu/` (formation) et `https://novaclub.eu/#autopilot` (Nova Autopilot) : vérifie qu'ils mènent où tu veux, sinon change les liens dans `config.json`.
 5. **`/annonce`** → un formulaire s'ouvre avec « Titre » et « Texte ». Teste avec `ping` = Aucun d'abord, puis `image` = Outils : la bannière choisie apparaît au-dessus de l'encadré. Avec un ping, la mention est sur la ligne au-dessus de l'image.
    Le texte accepte le gras (`**gras**`), les emojis et les listes (une ligne par `- élément`).
    Pour tester un ping : voir [les pings d'annonce](#les-pings-de-annonce).
@@ -315,7 +315,7 @@ Tests automatiques hors ligne (Discord est simulé, rien n'est envoyé à ton se
 
 ## 16. Personnaliser les textes
 
-Ouvre `config.json` avec le Bloc-notes ou VS Code. Les valeurs **À REMPLACER** sont des exemples :
+Ouvre `config.json` avec le Bloc-notes ou VS Code. Les textes de la formation, des outils, de Nova Autopilot et de la FAQ viennent du site **novaclub.eu** (voir [Textes issus du site](#textes-issus-du-site)) ; seul `tickets.questions_channel_id` reste à remplir :
 
 | Où | Quoi |
 |---|---|
@@ -486,6 +486,65 @@ Pour la réactiver, mets par exemple `50`. Je ne peux pas mesurer le rendu dans 
 
 Après chaque changement : `npx wrangler deploy`, puis republie le panneau (les anciens messages ne changent pas). La largeur dépend un peu de l'appareil (ordinateur, téléphone) : vérifie sur les deux si tu peux.
 La ligne invisible compte dans les limites de Discord (4096 caractères par texte d'encadré) : le bot te prévient si c'est trop long.
+
+## Textes issus du site
+
+Tous les textes des panneaux ont été **refaits à partir de https://novaclub.eu/** (lu le 13 novembre 2026), sans rien inventer :
+
+| Panneau | Ce qui vient du site |
+|---|---|
+| `/panel-formation` | 27 vidéos (3 h 18) en 4 modules, accès à vie, mises à jour gratuites, groupe privé Discord, eBay et Etsy, 1 mois de Nova Autopilot offert, modèles de fiches produit et de réponses SAV, **297 € paiement unique** |
+| `/panel-autopilot` | ce que fait le bot (repère les best-sellers, crée les fiches produit, passe les commandes chez le fournisseur, renvoie les suivis sur eBay), 1 mois offert puis **97 €/mois ou 247 €/trimestre sans engagement**, accès par connexion Discord (`/connexion.html`) |
+| `/panel-faq` | les 7 questions du site (stock, première vente, Nova Autopilot, accès à vie, débutant, plateformes…) + « Comment accéder à Nova Autopilot ? », « Est-ce autorisé par les plateformes ? » et « Comment ouvrir un ticket ? » |
+| `/panel-outils` | Nova Autopilot, l'espace élève (connexion Discord) et la page de la formation |
+| `/panel-infos` | bienvenue, salons utiles, section « Rejoins-nous » avec le site et la connexion |
+| `/panel-reglement` | règles adaptées (règles des plateformes, aucune promesse de gains) |
+
+À savoir :
+- **Mentions de prudence** reprises du site : « Les résultats présentés … sont des témoignages individuels et ne constituent pas une garantie de gain », « Rien n'est garanti ». Aucune promesse de gains n'est faite.
+- **Programme** : le site ne publie que les titres des 4 modules et les 8 vidéos du module 01. Les titres des modules 02 à 04 y sont encore « [À COMPLÉTER] » : le bot n'affiche donc que les titres de modules. Envoie-moi les titres des vidéos pour les ajouter (`formation.modules` dans `config.json`).
+- **Nova Autopilot** : seules les fonctions annoncées sur le site sont listées (`autopilot.features`). Les fonctions que tu avais mentionnées avant (publication groupée, suivi des prix, comptabilité) n'y figurent pas : ajoute-les dans `autopilot.features` si elles existent dans l'outil.
+- **Liens** : `formation.lien` et `infos.site` = `https://novaclub.eu/` ; `autopilot.lien_autopilot` = `https://novaclub.eu/#autopilot`. Le bouton d'achat du site mène à la boutique Shopify : ce lien n'est pas repris ici, mets-le dans `formation.lien` si tu veux un bouton qui ouvre directement l'achat.
+- Si le site change (prix, offre), mets à jour `config.json` : le bot ne relit pas le site tout seul.
+
+## Mise à jour : textes issus du site
+
+Pour un bot **déjà installé et déployé**.
+
+### 1. Fichiers à copier depuis le ZIP de la branche
+
+Télécharge le ZIP, décompresse-le, puis copie **depuis `nova-club-bot/` du ZIP vers ton dossier `nova-club-bot/`** (remplace s'il le demande) :
+
+| Copier (remplacer) | |
+|---|---|
+| `config.json` | tous les nouveaux textes. **Recopie dedans** ton `tickets.questions_channel_id` (identifiant du salon questions) et vérifie `infos.channels` (ton salon règlement `1556574078197047296` y est déjà) |
+| `src/` (tout le dossier) | `panels.js` gère les nouvelles sections (programme, prix, « Rejoins-nous ») |
+| `test/` (tout le dossier) | tests |
+| `README.md` | ce guide |
+
+| Garder (ne pas toucher) | |
+|---|---|
+| `.env` | tes secrets locaux (token, identifiants) |
+| `wrangler.toml`, `scripts/`, `package.json`, `package-lock.json`, `.github/…` | rien n'a changé |
+| `public/` | tes bannières et `decouverte-formation.png` |
+| `node_modules/`, `.wrangler/` | se gèrent tout seuls |
+
+### 2. Relancer
+
+Dans PowerShell, dossier `nova-club-bot` :
+
+```powershell
+npm test
+npx wrangler deploy
+```
+
+Pas besoin de `npm run register` (les commandes n'ont pas changé), ni de `npm install`, ni de `npm run secrets`.
+
+### 3. Republier les panneaux
+
+Relance `/panel-infos`, `/panel-reglement`, `/panel-tickets`, `/panel-formation`, `/panel-outils`, `/panel-faq` et `/panel-autopilot`, puis supprime les anciens messages : ils ne se mettent pas à jour tout seuls.
+
+---
 
 ## Mise à jour : bannière en pièce jointe
 

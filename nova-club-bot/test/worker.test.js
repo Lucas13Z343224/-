@@ -215,6 +215,10 @@ test("/panel-infos : titre et salons cliquables (réglages conservés)", async (
   const { body } = await publish("panel-infos");
   const e = assertLayout(body, "banniere-informations", "📌 Informations");
   assert.ok(e.description.includes("📜 <#1556574078197047296> — Le règlement à lire et accepter pour accéder au serveur."));
+  assert.match(e.description, /Bienvenue sur \*\*Nova Club \| E-commerce\*\* ! Ici, on apprend, on partage/);
+  assert.match(e.description, /\*\*🧭 Les salons utiles\*\*/);
+  assert.match(e.description, /\*\*🚀 Rejoins-nous\*\*/);
+  assert.ok(e.description.includes("https://novaclub.eu/connexion.html"));
   assert.equal(body.components, undefined);
 });
 
@@ -246,10 +250,14 @@ test("/panel-formation : encadré avec prix et lien, 2e encadré image, bouton l
   assert.equal(body.embeds.length, 2); // encadré de texte + image de présentation (la bannière est une pièce jointe)
   const e = assertLayout(body, "banniere-formation", "🎓 Formation dropshipping eBay & Etsy");
   assert.match(e.description, /eBay\*\* et \*\*Etsy/);
-  assert.match(e.description, /communauté privée/);
-  assert.match(e.description, /Nova Autopilot/);
-  assert.match(e.description, /À REMPLACER \(ex\. 97 €\)/);
-  assert.match(e.description, /https:\/\/exemple\.com\/a-remplacer-formation/);
+  assert.match(e.description, /27 vidéos/);
+  assert.match(e.description, /Groupe privé/);
+  assert.match(e.description, /1 mois de Nova Autopilot offert/);
+  assert.match(e.description, /297 € — paiement unique/);
+  assert.match(e.description, /\*\*04\*\* — Bonus/);
+  assert.match(e.description, /ne constituent pas une garantie de gain/);
+  assert.ok(!e.description.includes("[À COMPLÉTER]"));
+  assert.ok(e.description.includes("https://novaclub.eu/"));
   const second = body.embeds[1];
   assert.equal(second.color, ORANGE);
   assert.match(second.image.url, /decouverte-formation\.png\?v=4$/);
@@ -257,31 +265,48 @@ test("/panel-formation : encadré avec prix et lien, 2e encadré image, bouton l
   assert.equal(btn.style, 5);
   assert.equal(btn.label, "Découvrir la formation");
   assert.equal(btn.emoji.name, "🚀");
-  assert.equal(btn.url, "https://exemple.com/a-remplacer-formation");
+  assert.equal(btn.url, "https://novaclub.eu/");
 });
 
-test("/panel-outils : liste des outils avec liens, 3 exemples À REMPLACER", async () => {
+test("/panel-outils : liste des outils du site, avec liens", async () => {
   const { body } = await publish("panel-outils");
   const e = assertLayout(body, "banniere-outils", "🛠️ Outils pour ton business");
-  assert.equal(e.description.match(/À REMPLACER/g).length, 3);
-  assert.equal(e.description.match(/\]\(https:\/\/exemple\.com\/a-remplacer-outil-\d\)/g).length, 3);
+  assert.ok(!e.description.includes("À REMPLACER"));
+  assert.ok(e.description.includes("](https://novaclub.eu/#autopilot)"));
+  assert.ok(e.description.includes("](https://novaclub.eu/connexion.html)"));
+  assert.ok(e.description.includes("](https://novaclub.eu/)"));
+  assert.match(e.description, /🔹 \*\*Nova Autopilot\*\*/);
 });
 
 test("/panel-faq : une section par question", async () => {
   const { body } = await publish("panel-faq");
   const e = assertLayout(body, "banniere-faq", "❓ FAQ");
-  for (const q of ["Qu'est-ce que le dropshipping ?", "Comment accéder à Nova Autopilot ?", "Comment ouvrir un ticket ?", "Est-ce autorisé par les plateformes ?"]) {
+  for (const q of [
+    "Faut-il du stock ou un capital de départ ?",
+    "Combien de temps avant une première vente ?",
+    "Comment fonctionne Nova Autopilot, et combien coûte-t-il ?",
+    "Comment accéder à Nova Autopilot ?",
+    "L'accès est-il vraiment à vie ?",
+    "Est-ce adapté à un débutant complet ?",
+    "Sur quelles plateformes puis-je vendre ?",
+    "Est-ce autorisé par les plateformes ?",
+    "Comment ouvrir un ticket ?",
+  ]) {
     assert.ok(e.description.includes(`**💬 ${q}**`), q);
   }
+  assert.match(e.description, /Rien n'est garanti\./);
+  assert.match(e.description, /97 €\/mois ou 247 €\/trimestre, sans engagement/);
   assert.ok(e.description.includes("Chaque plateforme a ses propres règles. Lis-les avant de vendre et ne vends que des produits que tu as le droit de vendre. L'équipe ne peut pas garantir les décisions des plateformes."));
 });
 
 test("/panel-autopilot : présentation, bouton lien, aucune promesse de gains", async () => {
   const { body } = await publish("panel-autopilot");
   const e = assertLayout(body, "banniere-autopilot", "🤖 Nova Autopilot");
-  for (const word of ["Trouver des produits", "Publication groupée", "Suivi des prix", "commandes", "Comptabilité"]) assert.match(e.description, new RegExp(word));
+  for (const word of ["Repère les best-sellers", "Crée tes fiches produit", "Passe tes commandes", "Renvoie les suivis"]) assert.match(e.description, new RegExp(word));
+  assert.match(e.description, /1 mois offert\*\* avec la formation, puis \*\*97 €\/mois\*\* ou \*\*247 €\/trimestre\*\*, sans engagement/);
+  assert.ok(e.description.includes("https://novaclub.eu/connexion.html")); // accès : connexion avec Discord
   assert.match(e.description, /ne garantit aucun résultat ni aucun revenu/);
-  assert.equal(buttons(body)[0].url, "https://exemple.com/a-remplacer-autopilot");
+  assert.equal(buttons(body)[0].url, "https://novaclub.eu/#autopilot");
 });
 
 test("une image remplacée change d'adresse quand images_version change", async () => {
@@ -650,7 +675,7 @@ test("banner_position « haut_encadre » : menus et boutons restent sous le mess
     const rules = (await publish("panel-reglement")).body;
     assert.equal(rules.components[0].components[0].custom_id, "rules:accept");
     const formation = (await publish("panel-formation")).body;
-    assert.equal(formation.components[0].components[0].url, "https://exemple.com/a-remplacer-formation");
+    assert.equal(formation.components[0].components[0].url, "https://novaclub.eu/");
     assert.equal(formation.embeds[2].image.url, `${HOST}decouverte-formation.png?v=4`);
   })));
 
@@ -759,7 +784,7 @@ test("« fichier » : menus et boutons restent sous le message (dans payload_jso
     const rules = (await publish("panel-reglement")).body;
     assert.equal(rules.components[0].components[0].custom_id, "rules:accept");
     const formation = (await publish("panel-formation")).body;
-    assert.equal(formation.components[0].components[0].url, "https://exemple.com/a-remplacer-formation");
+    assert.equal(formation.components[0].components[0].url, "https://novaclub.eu/");
     assert.equal(formation.embeds[1].image.url, `${HOST}decouverte-formation.png?v=4`); // image de la formation dans l'encadré
   }));
 
@@ -936,7 +961,7 @@ test("par défaut, aucun caractère invisible U+2800 dans aucun panneau ni dans 
 test("la description se termine par le dernier texte (pas de ligne vide ajoutée)", async () => {
   const { body } = await publish("panel-faq");
   const d = body.embeds[0].description;
-  assert.ok(d.endsWith("L'équipe ne peut pas garantir les décisions des plateformes."));
+  assert.ok(d.endsWith("un salon privé est créé automatiquement entre toi et l'équipe."));
 });
 
 test("l'option reste disponible : largeur_invisible = N ajoute une dernière ligne de N caractères U+2800", () =>

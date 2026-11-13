@@ -133,7 +133,17 @@ export function infosPanel() {
   const list = c.channels.map((ch) => `${ch.emoji ?? "•"} <#${ch.id}> — ${ch.description}`).join("\n");
   const b = banner(c, "infos.banner");
   return message(
-    [embed({ title: c.title, description: join(c.welcome, section(c.channels_title, list)), image: b.image })],
+    [
+      embed({
+        title: c.title,
+        description: join(
+          c.welcome,
+          section(c.channels_title, list),
+          c.join_title && section(c.join_title, fill(c.join_text, { site: checkUrl(c.site, "infos.site"), connexion: checkUrl(c.connexion, "infos.connexion") })),
+        ),
+        image: b.image,
+      }),
+    ],
     undefined,
     b.content,
     b.bannerEmbed,
@@ -209,7 +219,13 @@ export function formationPanel() {
   const embeds = [
     embed({
       title: f.title,
-      description: join(fill(f.description, vars), section(f.points_title, points), section(f.details_title, fill(f.details, vars))),
+      description: join(
+        fill(f.description, vars),
+        section(f.points_title, points),
+        f.modules?.length && section(f.programme_title, f.modules.join("\n")),
+        section(f.details_title, fill(f.details, vars)),
+        f.disclaimer && `*${f.disclaimer}*`,
+      ),
       image: b.image,
     }),
   ];
@@ -245,7 +261,13 @@ export function autopilotPanel() {
     [
       embed({
         title: a.title,
-        description: join(a.description, section(a.features_title, features), `*${a.disclaimer}*`),
+        description: join(
+          a.description,
+          section(a.features_title, features),
+          a.offer && section(a.offer_title, a.offer),
+          a.access && section(a.access_title, fill(a.access, { connexion: checkUrl(a.connexion, "autopilot.connexion") })),
+          `*${a.disclaimer}*`,
+        ),
         image: b.image,
       }),
     ],
